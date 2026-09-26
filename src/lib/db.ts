@@ -8,7 +8,9 @@ function pooledDatabaseUrl() {
 
   try {
     const url = new URL(raw);
-    if (!url.searchParams.has("connection_limit")) url.searchParams.set("connection_limit", "1");
+    // Vercel can create many function instances. Keep each instance to a single
+    // database connection so Supabase's small session pool is not exhausted.
+    url.searchParams.set("connection_limit", "1");
     if (!url.searchParams.has("pool_timeout")) url.searchParams.set("pool_timeout", "10");
     return url.toString();
   } catch {
