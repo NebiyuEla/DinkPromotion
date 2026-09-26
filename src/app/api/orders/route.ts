@@ -70,6 +70,17 @@ export async function POST(request: NextRequest) {
     const discounts = await getDiscountMap();
     const discounted = discountedServicePrice(service.pricePerThousandMinor, service.platform, discounts);
     const amountMinor = calculateOrderAmountMinor(discounted.priceMinor, input.quantity);
+
+    // The Mini App has one checkout at a time. Replace any earlier no-payment
+    // draft so closing/reopening the app never creates a pile of fake orders.
+    await prisma.order.deleteMany({
+      where: {
+        userId: user.id,
+        status: OrderStatus.AWAITING_PAYMENT,
+        payment: { is: null },
+      },
+    });
+
     const order = await prisma.order.create({
       data: {
         publicId: newPublicOrderId(),
