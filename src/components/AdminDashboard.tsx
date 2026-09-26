@@ -71,8 +71,6 @@ export function AdminDashboard() {
   const load = useCallback(async (query = "") => {
     try {
       setError(null);
-      // Keep these reads sequential. On a small Supabase plan this avoids opening
-      // several database sessions at the same time just to render one dashboard.
       const overviewData = await api<Overview>("/api/admin/overview");
       setOverview(overviewData);
 
@@ -98,7 +96,7 @@ export function AdminDashboard() {
     setError(null);
     try {
       const result = await api<{ received: number; unpublished: number }>("/api/admin/services/sync", { method: "POST", body: "{}" });
-      setNotice(`Synced ${result.received.toLocaleString()} PRM4U services${result.unpublished ? ` and unpublished ${result.unpublished} removed provider service${result.unpublished === 1 ? "" : "s"}` : ""}. New services stay hidden until you price and publish them.`);
+      setNotice(`Synced ${result.received.toLocaleString()} PRM4U services${result.unpublished ? ` and unpublished ${result.unpublished} removed provider service${result.unpublished === 1 ? "" : "s"}` : ""}. New supported services publish automatically.`);
       await load(search);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sync failed");
@@ -208,7 +206,7 @@ export function AdminDashboard() {
         <AdminBroadcast />
 
         <section className="admin-panel">
-          <div className="admin-panel-head"><div><h2>Services</h2><p>New PRM4U services are imported automatically but stay unpublished. Set the Dink price and publish only what you want customers to see.</p></div></div>
+          <div className="admin-panel-head"><div><h2>Services</h2><p>Supported PRM4U services publish automatically at the configured Dink price. You can hide, reprice or feature any service here.</p></div></div>
           <form className="admin-search" onSubmit={submitSearch}><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search provider name, platform or category" /><button className="secondary-button" disabled={busy === "search"}>Search</button></form>
           <div className="admin-table-wrap">
             <table className="admin-table">
