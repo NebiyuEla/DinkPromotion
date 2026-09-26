@@ -370,6 +370,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (min-width: 760px) {
   .mini-app-shell { margin-top: 18px; margin-bottom: 18px; min-height: calc(100dvh - 36px); border-radius: 28px; overflow: hidden; box-shadow: 0 20px 70px rgba(23, 39, 31, .10); }
   .bottom-nav { width: 520px; bottom: 18px; border-radius: 0 0 28px 28px; }
+  .chip-scroll { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; gap: 8px; padding-bottom: 4px; }
+  .chip { display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 12px; min-height: 42px; }
 }
 
 @media (max-width: 360px) {

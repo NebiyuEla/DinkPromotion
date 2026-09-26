@@ -152,6 +152,7 @@ export function MiniApp() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [authState, setAuthState] = useState<"loading" | "ready" | "telegram-required" | "error">("loading");
+  const [authError, setAuthError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
   const [online, setOnline] = useState(true);
@@ -235,7 +236,7 @@ export function MiniApp() {
         if (active) setAuthState("ready");
       } catch (error) {
         console.error(error);
-        if (active) { setUser(null); setAuthState("error"); }
+        if (active) { setUser(null); setAuthError(error instanceof Error ? error.message : "Unable to connect to Telegram"); setAuthState("error"); }
       }
     })();
     return () => {
@@ -524,7 +525,7 @@ export function MiniApp() {
             finally { setBusy(false); }
           }} back={() => setView(paymentFlow.kind === "order" ? "order" : "wallet")} />
         )}
-        {view === "orders" && <OrdersView orders={orders} openOrder={openOrder} refresh={refreshAccount} busy={busy} authenticated={!!user} authState={authState} />}
+        {view === "orders" && <OrdersView orders={orders} openOrder={openOrder} refresh={refreshAccount} busy={busy} authenticated={!!user} authState={authState} authError={authError} />}
         {view === "order" && selectedOrder && (
           <OrderDetail
             order={selectedOrder}
@@ -556,6 +557,7 @@ export function MiniApp() {
             authenticated={!!user}
             busy={busy}
             authState={authState}
+            authError={authError}
             pendingPayments={pendingPayments}
             mobile={mobile}
             setMobile={setMobile}
@@ -571,6 +573,7 @@ export function MiniApp() {
           <ProfileView
             user={user}
             authState={authState}
+            authError={authError}
             ordersCount={orders.length}
             balanceMinor={balanceMinor}
             support={() => go("support", "profile")}
@@ -829,12 +832,12 @@ function PaymentPendingView({ flow, busy, onCheck, back }: { flow: PaymentFlow; 
   </>;
 }
 
-function OrdersView({ orders, openOrder, refresh, busy, authenticated, authState }: { orders: Order[]; openOrder: (order: Order) => void; refresh: () => void; busy: boolean; authenticated: boolean; authState: string }) {
+function OrdersView({ orders, openOrder, refresh, busy, authenticated, authState, authError }: { orders: Order[]; openOrder: (order: Order) => void; refresh: () => void; busy: boolean; authenticated: boolean; authState: string; authError: string | null }) {
   return (
     <>
       <AppTop title="My orders" subtitle="Track every purchase" />
       <div className="page-actions"><button type="button" className="secondary-button" onClick={refresh} disabled={busy || !authenticated}><RefreshCw size={16} className={busy ? "spin" : ""} /> Refresh</button></div>
-      {!authenticated ? <TelegramRequired compact state={authState} /> : orders.length ? (
+      {!authenticated ? <TelegramRequired compact state={authState} error={authError} /> : orders.length ? (
         <div className="order-list">
           {orders.map((order) => (
             <button type="button" className="order-row" key={order.id} onClick={() => openOrder(order)}>
@@ -883,11 +886,11 @@ function OrderDetail({ order, back, refresh, refill, cancel, pay, checkPayment, 
   );
 }
 
-function WalletView({ balanceMinor, transactions, pendingPayments, amount, setAmount, topUp, authenticated, busy, authState, mobile, setMobile, method, setMethod, resumePayment }: { balanceMinor: number; transactions: WalletTransaction[]; pendingPayments: PendingPayment[]; amount: string; setAmount: (value: string) => void; topUp: (event: FormEvent) => void; authenticated: boolean; busy: boolean; authState: string; mobile: string; setMobile: (value: string) => void; method: DirectMethod; setMethod: (value: DirectMethod) => void; resumePayment: (payment: PendingPayment) => void }) {
+function WalletView({ balanceMinor, transactions, pendingPayments, amount, setAmount, topUp, authenticated, busy, authState, authError, mobile, setMobile, method, setMethod, resumePayment }: { balanceMinor: number; transactions: WalletTransaction[]; pendingPayments: PendingPayment[]; amount: string; setAmount: (value: string) => void; topUp: (event: FormEvent) => void; authenticated: boolean; busy: boolean; authState: string; authError: string | null; mobile: string; setMobile: (value: string) => void; method: DirectMethod; setMethod: (value: DirectMethod) => void; resumePayment: (payment: PendingPayment) => void }) {
   return (
     <>
       <AppTop title="Wallet" subtitle="Pay faster with Dink balance" />
-      {!authenticated ? <TelegramRequired compact state={authState} /> : (
+      {!authenticated ? <TelegramRequired compact state={authState} error={authError} /> : (
         <>
           <section className="wallet-card"><span>Available balance</span><strong>{money(balanceMinor)}</strong><small>Refunds for eligible cancelled orders are returned here.</small></section>
           <form className="topup-form" onSubmit={topUp}>
@@ -914,8 +917,8 @@ function WalletView({ balanceMinor, transactions, pendingPayments, amount, setAm
   );
 }
 
-function ProfileView({ user, authState, ordersCount, balanceMinor, support, more }: { user: User | null; authState: string; ordersCount: number; balanceMinor: number; support: () => void; more: () => void }) {
-  if (!user) return <><AppTop title="Profile" subtitle="Your Dink account" /><TelegramRequired state={authState} /><div className="menu-list profile-public-menu"><button type="button" onClick={support}><LifeBuoy size={19} /><span><strong>Support</strong><small>Help and contact options</small></span><ChevronRight size={18} /></button><button type="button" onClick={more}><Settings2 size={19} /><span><strong>More & settings</strong><small>App information</small></span><ChevronRight size={18} /></button></div></>;
+function ProfileView({ user, authState, authError, ordersCount, balanceMinor, support, more }: { user: User | null; authState: string; authError: string | null; ordersCount: number; balanceMinor: number; support: () => void; more: () => void }) {
+  if (!user) return <><AppTop title="Profile" subtitle="Your Dink account" /><TelegramRequired state={authState} error={authError} /><div className="menu-list profile-public-menu"><button type="button" onClick={support}><LifeBuoy size={19} /><span><strong>Support</strong><small>Help and contact options</small></span><ChevronRight size={18} /></button><button type="button" onClick={more}><Settings2 size={19} /><span><strong>More & settings</strong><small>App information</small></span><ChevronRight size={18} /></button></div></>;
   return (
     <>
       <AppTop title="Profile" subtitle="Telegram account" />
@@ -961,12 +964,12 @@ function MoreView({ user, back }: { user: User | null; back: () => void }) {
   );
 }
 
-function TelegramRequired({ compact = false, state }: { compact?: boolean; state?: string }) {
+function TelegramRequired({ compact = false, state, error }: { compact?: boolean; state?: string; error?: string | null }) {
   return (
     <div className={`telegram-required ${compact ? "compact" : ""}`}>
       <LogIn size={26} />
       <h2>{state === "loading" ? "Connecting to Telegram" : state === "error" ? "Telegram sign-in failed" : "Open in Telegram"}</h2>
-      <p>{state === "loading" ? "Verifying your session…" : state === "error" ? "The Mini App could not verify your Telegram session. Close it and reopen it from the bot." : "Browsing is available here, but ordering, wallet and account features require a verified Telegram Mini App session."}</p>
+      <p>{state === "loading" ? "Verifying your session…" : state === "error" ? (error || "The Mini App could not verify your Telegram session. Close it and reopen it from the bot.") : "Browsing is available here, but ordering, wallet and account features require a verified Telegram Mini App session."}</p>
     </div>
   );
 }
