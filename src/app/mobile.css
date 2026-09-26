@@ -1,3 +1,560 @@
+/* Dink Promotion mobile interaction layer. Keep this file last in layout.tsx. */
+
+.mini-app-v2 .mini-app-content {
+  padding: 0 13px calc(72px + env(safe-area-inset-bottom));
+}
+
+.mini-app-v2 .app-top {
+  min-height: 58px;
+  margin-bottom: 7px;
+  gap: 10px;
+}
+
+.mini-app-v2 .brand-compact {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.mini-app-v2 .brand-compact .brand-logo {
+  width: 35px;
+  height: 35px;
+}
+
+.mini-app-v2 .app-top-copy strong {
+  font-size: 17px;
+  font-weight: 850;
+  letter-spacing: -.025em;
+}
+
+.mini-app-v2 .app-top-copy span {
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mini-app-v2 .compact-hero {
+  padding: 20px 18px 19px;
+  border-radius: 19px;
+  box-shadow: none;
+}
+
+.mini-app-v2 .compact-hero h1 {
+  font-size: clamp(28px, 8vw, 35px);
+  line-height: 1.01;
+  letter-spacing: -.052em;
+}
+
+.mini-app-v2 .compact-hero .hero-copy {
+  margin: 10px 0 15px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.mini-app-v2 .compact-hero .primary-button {
+  min-height: 45px;
+}
+
+.mini-app-v2 .hero-note {
+  margin-top: 11px;
+  display: flex;
+  width: fit-content;
+}
+
+.mini-app-v2 .section-block,
+.mini-app-v2 .compact-section {
+  margin-top: 18px;
+}
+
+.mini-app-v2 .section-heading {
+  margin: 0 1px 8px;
+}
+
+.mini-app-v2 .section-heading h2 {
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.mini-app-v2 .platform-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.mini-app-v2 .platform-card {
+  min-height: 79px;
+  padding: 9px 4px;
+  border-radius: 14px;
+  gap: 7px;
+  box-shadow: none;
+}
+
+.mini-app-v2 .platform-card strong {
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.mini-app-v2 .platform-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+
+.mini-app-v2 .service-stack,
+.mini-app-v2 .order-list,
+.mini-app-v2 .transaction-list {
+  gap: 7px;
+}
+
+.mini-app-v2 .service-row,
+.mini-app-v2 .order-row {
+  min-height: 72px;
+  padding: 10px 10px;
+  border-radius: 15px;
+  gap: 9px;
+  box-shadow: none;
+}
+
+.mini-app-v2 .service-row .service-icon,
+.mini-app-v2 .order-row .service-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.mini-app-v2 .service-copy strong,
+.mini-app-v2 .order-copy strong {
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.mini-app-v2 .service-copy small,
+.mini-app-v2 .order-copy small {
+  font-size: 9.5px;
+}
+
+.mini-app-v2 .service-copy b,
+.mini-app-v2 .order-copy b,
+.mini-app-v2 .service-price b {
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.mini-app-v2 .service-price small {
+  font-size: 8.5px;
+}
+
+.mini-app-v2 .search-box {
+  min-height: 46px;
+  margin-bottom: 9px;
+  border-radius: 13px;
+  box-shadow: none;
+}
+
+.mini-app-v2 .platform-filter {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 9px;
+}
+
+.mini-app-v2 .platform-filter-button,
+.mini-app-v2 .platform-filter-button:first-child {
+  grid-column: auto;
+  min-height: 39px;
+  padding: 5px 4px;
+  border-radius: 11px;
+  font-size: 9.5px;
+  font-weight: 850;
+}
+
+.mini-app-v2 .platform-filter-button.active {
+  background: #111513;
+  color: #fff;
+  border-color: #111513;
+  box-shadow: none;
+}
+
+.mini-app-v2 .platform-filter-button.active svg {
+  color: #37d950;
+}
+
+.type-filter-wrap {
+  position: relative;
+  margin: 0 0 13px;
+}
+
+.type-filter-trigger {
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+
+.type-filter-trigger:active {
+  transform: scale(.985);
+}
+
+.type-filter-trigger.open {
+  border-color: #a9dcb2;
+  box-shadow: 0 0 0 3px rgba(47, 209, 72, .08);
+}
+
+.type-filter-trigger > span {
+  display: grid;
+  gap: 1px;
+}
+
+.type-filter-trigger small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.type-filter-trigger strong {
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.type-filter-trigger.open > svg {
+  transform: rotate(180deg);
+}
+
+.type-filter-trigger > svg {
+  color: #69736e;
+  transition: transform .18s ease;
+}
+
+@keyframes type-panel-in {
+  from { opacity: 0; transform: translateY(-5px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.type-filter-panel {
+  margin-top: 7px;
+  padding: 7px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(18, 28, 22, .08);
+  animation: type-panel-in .18s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.type-filter-panel button {
+  min-width: 0;
+  min-height: 42px;
+  padding: 7px 9px;
+  border: 1px solid #edf0ee;
+  border-radius: 11px;
+  background: #f8faf9;
+  color: #29302c;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.type-filter-panel button.selected {
+  background: #eaf8ed;
+  border-color: #bce8c3;
+  color: #117d28;
+  font-weight: 850;
+}
+
+.type-filter-panel button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-app-v2 .service-group {
+  margin: 13px 0 18px;
+}
+
+.mini-app-v2 .service-group-head {
+  margin-bottom: 7px;
+}
+
+.mini-app-v2 .service-group-head h2 {
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.mini-app-v2 .detail-card,
+.mini-app-v2 .checkout-summary,
+.mini-app-v2 .payment-card,
+.mini-app-v2 .order-detail-head,
+.mini-app-v2 .progress-card,
+.mini-app-v2 .topup-form,
+.mini-app-v2 .profile-card,
+.mini-app-v2 .order-form {
+  padding: 13px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.mini-app-v2 .service-title-card {
+  margin-bottom: 8px;
+}
+
+.mini-app-v2 .service-title-card h1 {
+  font-size: 15px;
+}
+
+.mini-app-v2 .compact-form {
+  gap: 11px;
+}
+
+.mini-app-v2 .field-label {
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.mini-app-v2 .field-label > input,
+.mini-app-v2 .money-input,
+.mini-app-v2 .quantity-control {
+  min-height: 47px;
+}
+
+.mini-app-v2 .field-help {
+  font-size: 9px;
+}
+
+.mini-app-v2 .quantity-control {
+  grid-template-columns: 46px 1fr 46px;
+}
+
+.mini-app-v2 .quantity-control input {
+  font-size: 16px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-app-v2 .price-total {
+  padding: 10px 11px;
+}
+
+.mini-app-v2 .price-total strong,
+.mini-app-v2 .checkout-total strong {
+  font-size: 19px;
+}
+
+.mini-app-v2 .compact-checkout {
+  gap: 11px;
+}
+
+.mini-app-v2 .compact-payment,
+.mini-app-v2 .compact-topup {
+  margin-top: 8px;
+  gap: 11px;
+}
+
+.mini-app-v2 .direct-methods {
+  gap: 7px;
+}
+
+.mini-app-v2 .direct-method {
+  min-height: 60px;
+  padding: 8px;
+  border-radius: 13px;
+}
+
+.mini-app-v2 .direct-method img {
+  width: 34px;
+  height: 34px;
+}
+
+.mini-app-v2 .direct-method strong {
+  font-size: 11.5px;
+  font-weight: 850;
+}
+
+.mini-app-v2 .direct-method.selected {
+  background: #edf9ef;
+  border-color: #2ac743;
+  box-shadow: 0 0 0 1px #2ac743 inset;
+}
+
+.mini-app-v2 .mobile-field input {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.mini-app-v2 .wallet-pay-link {
+  min-height: 40px;
+  margin-top: 4px;
+}
+
+.mini-app-v2 .compact-pending {
+  padding: 21px 16px;
+  margin-bottom: 8px;
+}
+
+.mini-app-v2 .compact-pending h1 {
+  font-size: 20px;
+}
+
+.mini-app-v2 .compact-pending p {
+  margin-bottom: 8px;
+}
+
+.mini-app-v2 .compact-page-actions {
+  margin: 0 0 8px;
+}
+
+.mini-app-v2 .compact-page-actions .secondary-button {
+  min-height: 39px;
+  padding: 0 12px;
+  font-size: 11px;
+}
+
+.mini-app-v2 .status-pill {
+  max-width: 94px;
+  padding: 5px 7px;
+  font-size: 8.5px;
+  font-weight: 850;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.mini-app-v2 .compact-wallet {
+  min-height: 145px;
+  padding: 22px 18px;
+}
+
+.mini-app-v2 .compact-wallet span {
+  font-size: 11px;
+}
+
+.mini-app-v2 .compact-wallet strong {
+  margin-top: 8px;
+  font-size: 37px;
+}
+
+.mini-app-v2 .pending-list {
+  margin-top: 15px;
+}
+
+.mini-app-v2 .transaction-list {
+  margin-bottom: 0;
+}
+
+.mini-app-v2 .profile-card {
+  margin-bottom: 9px;
+}
+
+.mini-app-v2 .menu-list {
+  gap: 7px;
+}
+
+.mini-app-v2 .menu-list button,
+.mini-app-v2 .menu-static {
+  min-height: 61px;
+  border-radius: 14px;
+}
+
+.mini-app-v2 .empty-state {
+  padding: 20px 14px;
+  margin-top: 8px;
+}
+
+.mini-app-v2 .empty-state.loading-compact {
+  min-height: 72px;
+  padding: 14px;
+  gap: 7px;
+}
+
+.mini-app-v2 .bottom-nav {
+  min-height: calc(64px + env(safe-area-inset-bottom));
+  padding: 5px 6px calc(5px + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,.98);
+  border-top: 1px solid #e7ebe8;
+  box-shadow: 0 -5px 18px rgba(18, 28, 22, .045);
+  backdrop-filter: blur(14px);
+}
+
+.mini-app-v2 .nav-button {
+  min-height: 49px;
+  padding: 4px 2px;
+  border-radius: 13px;
+  gap: 3px;
+  color: #68716d;
+  font-size: 9.5px;
+  font-weight: 850;
+}
+
+.mini-app-v2 .nav-button svg {
+  width: 19px;
+  height: 19px;
+}
+
+.mini-app-v2 .nav-button.active {
+  background: #111513;
+  color: #fff;
+  box-shadow: none;
+}
+
+.mini-app-v2 .nav-button.active svg {
+  color: #38db51;
+  transform: translateY(-1px) scale(1.05);
+}
+
+.mini-app-v2 .nav-button.active::before {
+  content: none;
+}
+
+@media (max-width: 380px) {
+  .mini-app-v2 .mini-app-content {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mini-app-v2 .platform-filter {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mini-app-v2 .platform-filter-button:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .mini-app-v2 .service-row,
+  .mini-app-v2 .order-row {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .mini-app-v2 .direct-method {
+    gap: 5px;
+  }
+
+  .mini-app-v2 .direct-method img {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .type-filter-panel {
+    animation: none;
+  }
+}
+
 @media (max-width: 620px) {
   .admin-table td > strong,
   .admin-table td > small {
