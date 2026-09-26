@@ -15,12 +15,18 @@ function money(minor: number) {
   return `${(minor / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })} ETB`;
 }
 
+function setText(node: Element | null, value: string) {
+  if (node && node.textContent !== value) node.textContent = value;
+}
+
 export function PaymentFeeEnhancer() {
   useEffect(() => {
     let feePercent = DEFAULT_FEE_PERCENT;
     let stopped = false;
+    let queued = false;
 
     const apply = () => {
+      queued = false;
       if (stopped) return;
       const summary = document.querySelector<HTMLElement>(".checkout-summary.compact-checkout");
       const original = summary?.querySelector<HTMLElement>(".checkout-total");
@@ -52,22 +58,17 @@ export function PaymentFeeEnhancer() {
       const feeRow = breakdown.querySelector<HTMLElement>("[data-fee-row='fee']");
       const totalRow = breakdown.querySelector<HTMLElement>("[data-fee-row='total']");
       if (subtotalRow) {
-        const label = subtotalRow.querySelector("span");
-        const value = subtotalRow.querySelector("strong");
-        if (label) label.textContent = language === "am" ? "የአገልግሎት ዋጋ" : "Subtotal";
-        if (value) value.textContent = money(baseMinor);
+        setText(subtotalRow.querySelector("span"), language === "am" ? "የአገልግሎት ዋጋ" : "Subtotal");
+        setText(subtotalRow.querySelector("strong"), money(baseMinor));
       }
       if (feeRow) {
-        const label = feeRow.querySelector("span");
-        const value = feeRow.querySelector("strong");
-        if (label) label.textContent = `${language === "am" ? "የክፍያ አገልግሎት" : "Processing fee"} (${feePercent.toLocaleString("en-US", { maximumFractionDigits: 3 })}%)`;
-        if (value) value.textContent = money(feeMinor);
+        const feeLabel = `${language === "am" ? "የክፍያ አገልግሎት" : "Processing fee"} (${feePercent.toLocaleString("en-US", { maximumFractionDigits: 3 })}%)`;
+        setText(feeRow.querySelector("span"), feeLabel);
+        setText(feeRow.querySelector("strong"), money(feeMinor));
       }
       if (totalRow) {
-        const label = totalRow.querySelector("span");
-        const value = totalRow.querySelector("strong");
-        if (label) label.textContent = language === "am" ? "ጠቅላላ" : "Total";
-        if (value) value.textContent = money(totalMinor);
+        setText(totalRow.querySelector("span"), language === "am" ? "ጠቅላላ" : "Total");
+        setText(totalRow.querySelector("strong"), money(totalMinor));
       }
 
       const payButton = document.querySelector<HTMLButtonElement>(".direct-payment .primary-button[type='submit']");
@@ -75,12 +76,19 @@ export function PaymentFeeEnhancer() {
         const textNodes = Array.from(payButton.childNodes).filter((node) => node.nodeType === Node.TEXT_NODE);
         if (textNodes.length) {
           const label = language === "am" ? ` ${money(totalMinor)} ይክፈሉ` : ` Pay ${money(totalMinor)}`;
-          textNodes[textNodes.length - 1].textContent = label;
+          const last = textNodes[textNodes.length - 1];
+          if (last.textContent !== label) last.textContent = label;
         }
       }
     };
 
-    const observer = new MutationObserver(() => apply());
+    const scheduleApply = () => {
+      if (queued || stopped) return;
+      queued = true;
+      window.requestAnimationFrame(apply);
+    };
+
+    const observer = new MutationObserver(scheduleApply);
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
     void fetch("/api/config", { cache: "no-store" })
@@ -88,11 +96,11 @@ export function PaymentFeeEnhancer() {
       .then((data) => {
         const configured = Number(data?.paymentFeePercent);
         if (Number.isFinite(configured) && configured >= 0 && configured <= 25) feePercent = configured;
-        apply();
+        scheduleApply();
       })
-      .catch(() => apply());
+      .catch(scheduleApply);
 
-    apply();
+    scheduleApply();
     return () => {
       stopped = true;
       observer.disconnect();
