@@ -157,14 +157,18 @@ export async function payOrderFromWallet(orderId: string, userId: string) {
   await prisma.$transaction(async (tx) => {
     const existing = await tx.walletTransaction.findUnique({ where: { reference } });
     if (existing) return;
-    const wallet = await tx.walletAccount.findUnique({ where: { userId } });
-    if (!wallet || wallet.balanceMinor < order.amountMinor) {
-      throw new AppError("Insufficient wallet balance", 409, "INSUFFICIENT_BALANCE");
-    }
-    const updated = await tx.walletAccount.update({
-      where: { userId },
+
+    // Do the balance check and decrement in one row-locked UPDATE. Two orders
+    // paid at the same time can no longer both read the same balance and spend it.
+    const debited = await tx.walletAccount.updateMany({
+      where: { userId, balanceMinor: { gte: order.amountMinor } },
       data: { balanceMinor: { decrement: order.amountMinor } },
     });
+    if (debited.count === 0) {
+      throw new AppError("Insufficient wallet balance", 409, "INSUFFICIENT_BALANCE");
+    }
+    const updated = await tx.walletAccount.findUniqueOrThrow({ where: { userId } });
+
     await tx.walletTransaction.create({
       data: {
         userId,
