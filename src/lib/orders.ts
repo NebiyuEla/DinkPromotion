@@ -185,9 +185,10 @@ export async function payOrderFromWallet(orderId: string, userId: string) {
   }
 }
 
-export async function syncOpenProviderOrders() {
+export async function syncOpenProviderOrders(userId?: string) {
   const orders = await prisma.order.findMany({
     where: {
+      ...(userId ? { userId } : {}),
       providerOrderId: { not: null },
       status: { in: [OrderStatus.PENDING, OrderStatus.PROCESSING, OrderStatus.IN_PROGRESS, OrderStatus.PARTIAL] },
     },
