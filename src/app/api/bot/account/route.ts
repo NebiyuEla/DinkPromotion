@@ -12,6 +12,7 @@ const profileSchema = z.object({
   lastName: z.string().max(120).nullish(),
   username: z.string().max(120).nullish(),
   languageCode: z.string().max(12).nullish(),
+  syncOrders: z.boolean().optional().default(false),
 });
 
 export async function POST(request: NextRequest) {
@@ -20,10 +21,12 @@ export async function POST(request: NextRequest) {
     const profile = profileSchema.parse(await request.json());
     const user = await syncBotUser(profile);
 
-    try {
-      await syncOpenProviderOrders(user.id);
-    } catch (error) {
-      console.warn("Bot account provider sync skipped", error);
+    if (profile.syncOrders) {
+      try {
+        await syncOpenProviderOrders(user.id);
+      } catch (error) {
+        console.warn("Bot account provider sync skipped", error);
+      }
     }
 
     const [wallet, transactions, orders, discounts, pendingTopUp] = await Promise.all([
