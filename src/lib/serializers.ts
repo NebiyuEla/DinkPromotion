@@ -9,6 +9,7 @@ export function serializeUser(user: User) {
     username: user.username,
     photoUrl: user.photoUrl,
     languageCode: user.languageCode,
+    paymentMobile: user.paymentMobile,
     isAdmin: user.isAdmin,
   };
 }
