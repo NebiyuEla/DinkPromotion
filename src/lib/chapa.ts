@@ -73,7 +73,17 @@ export async function initiateDirectCharge(input: {
   });
   const payload = (await response.json().catch(() => null)) as { status?: string; message?: string } | null;
   if (!response.ok || payload?.status?.toLowerCase() !== "success") {
-    throw new AppError(payload?.message || "Payment request could not be started. Check the order before trying again.", 502, "CHAPA_DIRECT_CHARGE_FAILED");
+    // 5xx/timeout/rate-limit responses are ambiguous: the provider may have
+    // accepted the reference even though our response was lost. Keep the local
+    // payment pending and verify the same tx_ref rather than creating a duplicate.
+    const uncertain = response.status >= 500 || response.status === 408 || response.status === 429;
+    throw new AppError(
+      payload?.message || (uncertain
+        ? "Payment request status is uncertain. Check the payment before trying again."
+        : "Payment request was rejected."),
+      uncertain ? 502 : 409,
+      uncertain ? "CHAPA_DIRECT_CHARGE_UNCERTAIN" : "CHAPA_DIRECT_CHARGE_REJECTED",
+    );
   }
   // A successful initiation is only an authorization request. Fulfillment happens
   // after transaction verification confirms the exact amount and reference.
