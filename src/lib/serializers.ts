@@ -25,9 +25,10 @@ export function serializeService(service: Service) {
     name: service.displayName,
     description: service.description,
     platform: service.platform,
-    // PRM4U v2 explicitly exposes `type` separately from provider `category`.
-    // The customer-facing "Type" filter should therefore use providerType.
-    category: service.providerType || service.category,
+    // `category` is Dink's customer-facing action classification (Views, Likes,
+    // Followers, etc.). Keep PRM4U's transport/order type available separately.
+    category: service.category,
+    providerType: service.providerType,
     providerCategory: service.providerCategory,
     minQuantity: service.minQuantity,
     maxQuantity: service.maxQuantity,
@@ -39,7 +40,6 @@ export function serializeService(service: Service) {
 }
 
 export function serializeOrder(order: Order & { service?: Service; payment?: Payment | null }) {
-  const activePayment = order.payment && order.payment.status !== "FAILED" ? order.payment : null;
   return {
     id: order.id,
     publicId: order.publicId,
@@ -57,12 +57,15 @@ export function serializeOrder(order: Order & { service?: Service; payment?: Pay
     updatedAt: order.updatedAt.toISOString(),
     completedAt: order.completedAt?.toISOString() || null,
     service: order.service ? serializeService(order.service) : undefined,
-    payment: activePayment
+    // A failed payment attempt must remain visible to the client so the checkout
+    // can be retried safely. Hiding it makes a real attempted order look like an
+    // abandoned checkout draft and removes the recovery path.
+    payment: order.payment
       ? {
-          status: activePayment.status,
-          checkoutUrl: activePayment.checkoutUrl,
-          txRef: activePayment.txRef,
-          amountMinor: activePayment.amountMinor,
+          status: order.payment.status,
+          checkoutUrl: order.payment.checkoutUrl,
+          txRef: order.payment.txRef,
+          amountMinor: order.payment.amountMinor,
         }
       : undefined,
   };
