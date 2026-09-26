@@ -8,6 +8,7 @@ import "@fontsource/dm-sans/800.css";
 import "./globals.css";
 import "./polish.css";
 import "./mobile.css";
+import "./interaction-fixes.css";
 
 export const metadata: Metadata = {
   title: "Dink Promotion",
