@@ -45,6 +45,8 @@ async function sendOpen(chatId, text, label) {
   await telegram("sendMessage", {
     chat_id: chatId,
     text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
     reply_markup: miniAppKeyboard(label),
   });
 }
@@ -53,15 +55,15 @@ async function sendWelcome(chatId, firstName) {
   const name = typeof firstName === "string" && firstName.trim() ? firstName.trim() : "there";
   await sendOpen(
     chatId,
-    `Welcome ${name}!\n\nChoose a promotion service, pay in ETB, and track your order inside Dink Promotion.`,
-    "Open Dink Promotion",
+    `<b>Dink Promotion</b>\n\nHi ${name}. Choose a service, pay in ETB, and track it from one place.`,
+    "Open Mini App",
   );
 }
 
 async function sendHelp(chatId) {
   await sendOpen(
     chatId,
-    "Use the Mini App for services, orders, wallet and support. If you have an order issue, include your Dink order ID when contacting support.",
+    "<b>Need help?</b>\n\nOpen the Mini App and go to Profile → Support.",
     "Open Mini App",
   );
 }
@@ -78,19 +80,19 @@ async function handleUpdate(update) {
     return;
   }
   if (command === "/services") {
-    await sendOpen(message.chat.id, "Browse available Dink Promotion services and current ETB prices.", "Browse services");
+    await sendOpen(message.chat.id, "<b>Services</b>\n\nBrowse current services and ETB prices.", "Browse services");
     return;
   }
   if (command === "/orders") {
-    await sendOpen(message.chat.id, "Open Dink Promotion to see your orders and latest status.", "View orders");
+    await sendOpen(message.chat.id, "<b>Orders</b>\n\nSee your paid orders and latest status.", "View orders");
     return;
   }
   if (command === "/balance") {
-    await sendOpen(message.chat.id, "Open your Dink wallet to see your current balance and transactions.", "View wallet");
+    await sendOpen(message.chat.id, "<b>Wallet</b>\n\nCheck your Dink balance and transactions.", "View wallet");
     return;
   }
   if (command === "/support") {
-    await sendOpen(message.chat.id, "Open Dink Promotion and go to Profile → Support for help with an order or payment.", "Get support");
+    await sendOpen(message.chat.id, "<b>Support</b>\n\nOpen the Mini App for order or payment help.", "Get support");
     return;
   }
   if (command === "/help") {
@@ -99,15 +101,14 @@ async function handleUpdate(update) {
 }
 
 async function configureBot() {
-  // Long polling and webhooks cannot be active at the same time.
   await telegram("deleteWebhook", { drop_pending_updates: false });
 
   await telegram("setMyCommands", {
     commands: [
       { command: "start", description: "Open Dink Promotion" },
-      { command: "services", description: "Browse promotion services" },
-      { command: "orders", description: "Check your orders" },
-      { command: "balance", description: "View your balance" },
+      { command: "services", description: "Browse services" },
+      { command: "orders", description: "View orders" },
+      { command: "balance", description: "View wallet" },
       { command: "support", description: "Contact support" },
       { command: "help", description: "Get help" },
     ],
