@@ -9,6 +9,7 @@ import "./globals.css";
 import "./polish.css";
 import "./mobile.css";
 import "./interaction-fixes.css";
+import "./preferences.css";
 
 export const metadata: Metadata = {
   title: "Dink Promotion",
@@ -27,10 +28,24 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+const themeInit = `(() => {
+  try {
+    const stored = localStorage.getItem("dink-promotion-theme");
+    const theme = stored === "dark" || stored === "light"
+      ? stored
+      : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  } catch (_) {
+    document.documentElement.dataset.theme = "light";
+  }
+})();`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <link rel="preload" href="/dink-promotion-mark.png" as="image" />
         <link rel="preload" href="/dink-promotion-logo.png" as="image" />
       </head>
