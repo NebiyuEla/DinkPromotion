@@ -159,6 +159,7 @@ export function detectCategory(name: string) {
 }
 
 export function isSupportedPrmType(type: string) {
-  const value = type.trim().toLowerCase();
-  return value === "default" || value === "package";
+  // Dink's checkout is quantity-based. PRM4U Package orders accept only a link,
+  // so treating Package rates as a per-1,000 quantity price would charge/order incorrectly.
+  return type.trim().toLowerCase() === "default";
 }
