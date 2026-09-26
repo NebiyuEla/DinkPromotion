@@ -20,7 +20,9 @@ const orderWhere = (userId: string) => ({
   userId,
   OR: [
     { status: { not: OrderStatus.AWAITING_PAYMENT } },
-    { payment: { is: { status: { in: [PaymentStatus.PENDING, PaymentStatus.SUCCESS] } } } },
+    // Any real payment attempt belongs in history, including a failed attempt
+    // that the user may safely retry.
+    { payment: { isNot: null } },
   ],
 });
 
