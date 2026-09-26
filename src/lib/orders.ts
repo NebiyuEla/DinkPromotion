@@ -216,6 +216,15 @@ export async function syncOpenProviderOrders(userId?: string) {
         completedAt: mapped === OrderStatus.COMPLETED ? new Date() : order.completedAt,
       },
     });
+    if (mapped === OrderStatus.CANCELED) {
+      try {
+        await refundOrderToWalletOnce(order.id, `Refund for cancelled ${order.publicId}`);
+      } catch (error) {
+        // The status is still authoritative. The unique refund reference makes a
+        // later sync/retry safe if the wallet write is temporarily unavailable.
+        console.error("Could not apply provider cancellation refund", error);
+      }
+    }
     updated += 1;
   }
   return { checked: orders.length, updated };
