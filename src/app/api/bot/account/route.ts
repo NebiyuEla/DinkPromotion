@@ -1,4 +1,4 @@
-import { PaymentStatus } from "@prisma/client";
+import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { localMobile, requireBotRequest, syncBotUser } from "@/lib/bot-api";
@@ -12,14 +12,14 @@ const profileSchema = z.object({
   lastName: z.string().max(120).nullish(),
   username: z.string().max(120).nullish(),
   languageCode: z.string().max(12).nullish(),
-  view: z.enum(["all", "profile", "wallet", "orders", "offers", "topup", "support"]).optional().default("all"),
+  view: z.enum(["all", "home", "profile", "wallet", "orders", "offers", "topup", "support"]).optional().default("all"),
   syncOrders: z.boolean().optional().default(false),
 });
 
 const orderWhere = (userId: string) => ({
   userId,
   OR: [
-    { status: { not: "AWAITING_PAYMENT" as const } },
+    { status: { not: OrderStatus.AWAITING_PAYMENT } },
     { payment: { is: { status: { in: [PaymentStatus.PENDING, PaymentStatus.SUCCESS] } } } },
   ],
 });
@@ -54,6 +54,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(base);
     }
 
+    if (profile.view === "home") {
+      const [wallet, activeOrders] = await Promise.all([
+        prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
+        prisma.order.count({
+          where: {
+            ...orderWhere(user.id),
+            status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED] },
+          },
+        }),
+      ]);
+      return NextResponse.json({ ...base, balanceMinor: wallet.balanceMinor, activeOrders });
+    }
+
     if (profile.view === "wallet") {
       const [wallet, transactions] = await Promise.all([
         prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
@@ -83,7 +96,7 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: 5,
       });
-      const activeOrders = orders.filter((order) => !["COMPLETED", "CANCELED", "FAILED"].includes(order.status)).length;
+      const activeOrders = orders.filter((order) => ![OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED].includes(order.status)).length;
       return NextResponse.json({
         ...base,
         activeOrders,
@@ -127,7 +140,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    const activeOrders = orders.filter((order) => !["COMPLETED", "CANCELED", "FAILED"].includes(order.status)).length;
+    const activeOrders = orders.filter((order) => ![OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED].includes(order.status)).length;
 
     return NextResponse.json({
       ...base,
