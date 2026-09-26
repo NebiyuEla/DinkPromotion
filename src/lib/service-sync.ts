@@ -22,7 +22,6 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
   const providerIds: number[] = [];
   let created = 0;
   let updated = 0;
-  let incompatibleUnpublished = 0;
 
   for (let i = 0; i < services.length; i += 100) {
     const batch = services.slice(i, i + 100).filter((item) => Number.isSafeInteger(Number(item.service)));
@@ -68,10 +67,9 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
           refill: Boolean(item.refill),
           cancel: Boolean(item.cancel),
           compatible,
-          ...(compatible ? {} : { active: false }),
           lastProviderSyncAt: now,
         },
-        select: { createdAt: true, updatedAt: true, active: true },
+        select: { createdAt: true, updatedAt: true },
       });
     });
 
@@ -81,13 +79,12 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
       if (Math.abs(result.createdAt.getTime() - result.updatedAt.getTime()) < 1000) created += 1;
       else updated += 1;
     }
-
-    // Count provider entries that this checkout cannot safely fulfill. They are
-    // forced unpublished by the update above, while manually hidden compatible
-    // services remain hidden across syncs.
-    incompatibleUnpublished += batch.filter((item) => !isSupportedPrmType(item.type)).length;
   }
 
+  const incompatible = await prisma.service.updateMany({
+    where: { provider: "PRM4U", compatible: false, active: true },
+    data: { active: false },
+  });
   const removed = providerIds.length
     ? await prisma.service.updateMany({
         where: { provider: "PRM4U", providerServiceId: { notIn: providerIds }, active: true },
@@ -95,7 +92,7 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
       })
     : { count: 0 };
 
-  const unpublished = removed.count + incompatibleUnpublished;
+  const unpublished = incompatible.count + removed.count;
   if (actorId) {
     await prisma.auditLog.create({
       data: {
