@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentStatus } from "@prisma/client";
+import { OrderStatus, PaymentKind, PaymentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { localMobile, requireBotRequest, syncBotUser } from "@/lib/bot-api";
@@ -85,8 +85,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (profile.view === "topup") {
-      const wallet = await prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } });
-      return NextResponse.json({ ...base, balanceMinor: wallet.balanceMinor });
+      const [wallet, pendingTopUp] = await Promise.all([
+        prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
+        prisma.payment.findFirst({
+          where: { userId: user.id, kind: PaymentKind.WALLET_TOPUP, status: PaymentStatus.PENDING },
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
+      return NextResponse.json({
+        ...base,
+        balanceMinor: wallet.balanceMinor,
+        pendingTopUp: pendingTopUp
+          ? { txRef: pendingTopUp.txRef, amountMinor: pendingTopUp.amountMinor, createdAt: pendingTopUp.createdAt.toISOString() }
+          : null,
+      });
     }
 
     if (profile.view === "orders") {
@@ -135,7 +147,7 @@ export async function POST(request: NextRequest) {
       }),
       prisma.discountRule.findMany({ where: { active: true, percent: { gt: 0 } }, orderBy: { scope: "asc" } }),
       prisma.payment.findFirst({
-        where: { userId: user.id, kind: "WALLET_TOPUP", status: PaymentStatus.PENDING },
+        where: { userId: user.id, kind: PaymentKind.WALLET_TOPUP, status: PaymentStatus.PENDING },
         orderBy: { createdAt: "desc" },
       }),
     ]);
