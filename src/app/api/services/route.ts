@@ -11,7 +11,11 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get("category")?.trim();
   const search = searchParams.get("search")?.trim();
   const featured = searchParams.get("featured") === "true";
-  const take = Math.min(Math.max(Number(searchParams.get("take") || 100), 1), 100);
+  const requestedTake = Math.min(Math.max(Number(searchParams.get("take") || 100), 1), 300);
+  // The Mini App filters the initial catalog client-side. Give that unfiltered
+  // request enough services to contain every main platform instead of only the
+  // cheapest first 100.
+  const take = platform || category || search || featured ? requestedTake : Math.max(requestedTake, 300);
 
   const services = await prisma.service.findMany({
     where: {
@@ -35,8 +39,8 @@ export async function GET(request: NextRequest) {
   });
 
   // Keep the customer request fast. When the cached provider catalog is older than
-  // ten minutes, refresh it after the response. New provider services are imported
-  // unpublished; services removed by PRM4U are automatically unpublished.
+  // ten minutes, refresh it after the response. Newly added supported services are
+  // published automatically; services removed by PRM4U are automatically hidden.
   after(async () => {
     try {
       if (await isPrmCatalogStale()) await syncPrmServices();

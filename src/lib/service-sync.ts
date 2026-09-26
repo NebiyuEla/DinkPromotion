@@ -9,6 +9,7 @@ export type ServiceSyncResult = {
   unpublished: number;
 };
 
+const CUSTOMER_PLATFORMS = new Set(["Instagram", "TikTok", "YouTube", "Telegram", "Facebook", "X / Twitter"]);
 let activeSync: Promise<ServiceSyncResult> | null = null;
 
 function cleanName(name: string) {
@@ -32,6 +33,8 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
       const compatible = isSupportedPrmType(item.type);
       const platform = detectPlatform(item.name, item.category);
       const category = detectCategory(item.name);
+      const pricePerThousandMinor = providerRateToEtbMinor(item.rate);
+      const autoPublish = compatible && pricePerThousandMinor > 0 && CUSTOMER_PLATFORMS.has(platform);
 
       return prisma.service.upsert({
         where: { provider_providerServiceId: { provider: "PRM4U", providerServiceId } },
@@ -50,8 +53,8 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
           refill: Boolean(item.refill),
           cancel: Boolean(item.cancel),
           compatible,
-          pricePerThousandMinor: providerRateToEtbMinor(item.rate),
-          active: false,
+          pricePerThousandMinor,
+          active: autoPublish,
           lastProviderSyncAt: now,
         },
         update: {
