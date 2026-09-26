@@ -8,8 +8,8 @@ Production-oriented Telegram Mini App for Dink Promotion. The customer-facing ap
 - HttpOnly signed sessions and admin access controlled by Telegram IDs.
 - PRM4U API v2 integration: service sync, order placement, status sync, refill, cancel and provider balance.
 - Curated-service workflow: synced services are **not** published automatically. Admin sets Dink pricing and enables selected services.
-- Customer flows: Home, Services, service details, order creation, Chapa checkout, Dink Wallet payment, My Orders, order tracking, refill/cancel where supported, Wallet, Profile and Support.
-- Chapa initialization + callback + signed webhook verification + mandatory server-side transaction re-verification before fulfillment.
+- Customer flows: Home, Services, service details, order creation, direct Telebirr/CBE Birr payment, Dink Wallet payment, My Orders, order tracking, refill/cancel where supported, Wallet, Profile and Support.
+- Chapa Telebirr and CBE Birr direct-charge requests, signed webhook verification, and mandatory server-side transaction verification before fulfillment. Older hosted-checkout links remain available for existing pending payments.
 - Idempotent wallet top-ups and wallet debits/refunds.
 - Provider duplicate-risk protection: ambiguous PRM4U network failures become `PROVIDER_REVIEW` and are not automatically retried. Definitive provider errors become `PROVIDER_ERROR` and can be retried by an admin.
 - Responsive admin dashboard for catalog sync, pricing, publish controls, provider balance and order operations.
@@ -70,6 +70,8 @@ The Mini App can be browsed outside Telegram, but ordering, wallet and account f
 Configure your Telegram bot's Mini App URL to your deployed `APP_URL`. Production authentication rejects missing, invalid or expired Telegram init data.
 
 ## Chapa setup
+
+The customer checkout asks for a Telebirr or CBE Birr registered Ethiopian mobile number and sends a direct USSD charge request. Enable Direct Charge for both methods on the Chapa merchant account before offering paid services. A successful initiation is pending until the customer approves it and Chapa's transaction verification confirms the amount and reference. Failed or uncertain requests remain attached to their order for review; the app does not send a second request automatically.
 
 In the Chapa dashboard, set the webhook URL to:
 

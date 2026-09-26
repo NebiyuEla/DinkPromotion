@@ -25,7 +25,7 @@ import {
   WifiOff,
   XCircle,
 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Brand } from "./Brand";
 import { PlatformIcon, platformClass } from "./PlatformIcon";
 
@@ -70,7 +70,7 @@ type Order = {
   updatedAt: string;
   completedAt: string | null;
   service?: Service;
-  payment?: { status: string; checkoutUrl: string | null };
+  payment?: { status: string; checkoutUrl: string | null; txRef: string };
 };
 
 type WalletTransaction = {
@@ -81,8 +81,11 @@ type WalletTransaction = {
   description: string;
   createdAt: string;
 };
+type PendingPayment = { txRef: string; amountMinor: number; checkoutUrl: string | null; createdAt: string };
+type DirectMethod = "telebirr" | "cbebirr";
+type PaymentFlow = { txRef: string; method: DirectMethod; kind: "order" | "wallet" };
 
-type View = "home" | "services" | "orders" | "wallet" | "profile" | "service" | "checkout" | "order" | "support" | "more";
+type View = "home" | "services" | "orders" | "wallet" | "profile" | "service" | "checkout" | "payment" | "order" | "support" | "more";
 
 type ApiError = Error & { code?: string };
 
@@ -142,6 +145,10 @@ export function MiniApp() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [balanceMinor, setBalanceMinor] = useState(0);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
+  const [paymentFlow, setPaymentFlow] = useState<PaymentFlow | null>(null);
+  const [mobile, setMobile] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<DirectMethod>("telebirr");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [authState, setAuthState] = useState<"loading" | "ready" | "telegram-required" | "error">("loading");
@@ -154,6 +161,7 @@ export function MiniApp() {
   const [orderLink, setOrderLink] = useState("");
   const [quantity, setQuantity] = useState(1000);
   const [topUpEtb, setTopUpEtb] = useState("500");
+  const topUpRequestRef = useRef<string | null>(null);
 
   const showMessage = useCallback((text: string, tone: "success" | "error" | "info" = "info") => {
     setMessage({ text, tone });
@@ -175,12 +183,13 @@ export function MiniApp() {
   const loadPrivate = useCallback(async () => {
     const [ordersData, walletData, meData] = await Promise.all([
       api<{ orders: Order[] }>("/api/orders"),
-      api<{ balanceMinor: number; transactions: WalletTransaction[] }>("/api/wallet"),
+      api<{ balanceMinor: number; transactions: WalletTransaction[]; pendingPayments: PendingPayment[] }>("/api/wallet"),
       api<{ user: User }>("/api/me"),
     ]);
     setOrders(ordersData.orders);
     setBalanceMinor(walletData.balanceMinor);
     setTransactions(walletData.transactions);
+    setPendingPayments(walletData.pendingPayments || []);
     setUser(meData.user);
   }, []);
 
@@ -226,7 +235,7 @@ export function MiniApp() {
         if (active) setAuthState("ready");
       } catch (error) {
         console.error(error);
-        if (active) setAuthState("error");
+        if (active) { setUser(null); setAuthState("error"); }
       }
     })();
     return () => {
@@ -310,7 +319,7 @@ export function MiniApp() {
     }
   }
 
-  async function payOrder(method: "chapa" | "wallet") {
+  async function payOrder(method: DirectMethod | "wallet") {
     if (!selectedOrder || !requireTelegram()) return;
     setBusy(true);
     try {
@@ -325,11 +334,13 @@ export function MiniApp() {
         showMessage("Payment accepted. Your order was sent for processing.", "success");
         haptic("success");
       } else {
-        const data = await api<{ checkoutUrl: string }>(`/api/orders/${selectedOrder.id}/pay`, {
+        const data = await api<{ checkoutUrl?: string; txRef: string; status?: string }>(`/api/orders/${selectedOrder.id}/pay`, {
           method: "POST",
-          body: JSON.stringify({ method }),
+          body: JSON.stringify({ method, mobile }),
         });
-        openExternal(data.checkoutUrl);
+        setSelectedOrder({ ...selectedOrder, payment: { status: "PENDING", checkoutUrl: data.checkoutUrl || null, txRef: data.txRef } });
+        if (data.checkoutUrl) openExternal(data.checkoutUrl);
+        else { setPaymentFlow({ txRef: data.txRef, method, kind: "order" }); setView("payment"); }
       }
     } catch (error) {
       showMessage(error instanceof Error ? error.message : "Payment could not be started", "error");
@@ -349,11 +360,15 @@ export function MiniApp() {
     }
     setBusy(true);
     try {
-      const data = await api<{ checkoutUrl: string }>("/api/wallet/top-up", {
+      const requestId = topUpRequestRef.current || crypto.randomUUID();
+      topUpRequestRef.current = requestId;
+      const data = await api<{ checkoutUrl?: string | null; txRef: string }>("/api/wallet/top-up", {
         method: "POST",
-        body: JSON.stringify({ amountMinor: Math.round(amount * 100) }),
+        body: JSON.stringify({ amountMinor: Math.round(amount * 100), mobile, method: paymentMethod, requestId }),
       });
-      openExternal(data.checkoutUrl);
+      topUpRequestRef.current = null;
+      if (data.checkoutUrl) openExternal(data.checkoutUrl);
+      else { setPaymentFlow({ txRef: data.txRef, method: paymentMethod, kind: "wallet" }); setView("payment"); }
     } catch (error) {
       showMessage(error instanceof Error ? error.message : "Unable to start wallet top-up", "error");
     } finally {
@@ -377,6 +392,32 @@ export function MiniApp() {
       setBusy(false);
     }
   }
+
+  const checkPayment = useCallback(async (flow: PaymentFlow) => {
+    const result = await api<{ status: "success" | "pending" | "failed" }>(`/api/payments/status?tx_ref=${encodeURIComponent(flow.txRef)}`);
+    if (result.status === "success") {
+      await loadPrivate();
+      if (flow.kind === "order" && selectedOrder) {
+        const data = await api<{ order: Order }>(`/api/orders/${selectedOrder.id}`);
+        setSelectedOrder(data.order);
+      }
+      setPaymentFlow(null);
+      setView(flow.kind === "order" ? "order" : "wallet");
+      showMessage("Payment confirmed", "success");
+    }
+    return result.status;
+  }, [loadPrivate, selectedOrder, showMessage]);
+
+  useEffect(() => {
+    if (view !== "payment" || !paymentFlow || !online) return;
+    let checking = false;
+    const timer = window.setInterval(() => {
+      if (checking) return;
+      checking = true;
+      void checkPayment(paymentFlow).catch(() => {}).finally(() => { checking = false; });
+    }, 7000);
+    return () => window.clearInterval(timer);
+  }, [view, paymentFlow, online, checkPayment]);
 
   async function requestRefill() {
     if (!selectedOrder) return;
@@ -431,7 +472,7 @@ export function MiniApp() {
             servicesState={servicesState}
             retryServices={() => { void loadServices().catch(() => showMessage("Could not load services.", "error")); }}
             openService={openService}
-            openServices={(selectedPlatform?: string) => { setPlatform(selectedPlatform || "All"); go("services", "home"); }}
+            openServices={(selectedPlatform?: string) => { setPlatform(selectedPlatform || "All"); setCategory("All"); setSearch(""); go("services", "home"); }}
           />
         )}
         {view === "services" && (
@@ -468,7 +509,20 @@ export function MiniApp() {
             onPay={payOrder}
             back={() => setView("service")}
             busy={busy}
+            mobile={mobile}
+            setMobile={setMobile}
           />
+        )}
+        {view === "payment" && paymentFlow && (
+          <PaymentPendingView flow={paymentFlow} busy={busy} onCheck={async () => {
+            setBusy(true);
+            try {
+              const status = await checkPayment(paymentFlow);
+              if (status === "pending") showMessage("Still waiting for confirmation", "info");
+              if (status === "failed") showMessage("Payment was not completed. Contact support if you were charged.", "error");
+            } catch (error) { showMessage(error instanceof Error ? error.message : "Could not verify payment", "error"); }
+            finally { setBusy(false); }
+          }} back={() => setView(paymentFlow.kind === "order" ? "order" : "wallet")} />
         )}
         {view === "orders" && <OrdersView orders={orders} openOrder={openOrder} refresh={refreshAccount} busy={busy} authenticated={!!user} authState={authState} />}
         {view === "order" && selectedOrder && (
@@ -480,6 +534,16 @@ export function MiniApp() {
             cancel={cancelOrder}
             busy={busy}
             pay={() => setView("checkout")}
+            checkPayment={async () => {
+              if (!selectedOrder?.payment) return;
+              setBusy(true);
+              try {
+                const result = await checkPayment({ txRef: selectedOrder.payment.txRef, method: "telebirr", kind: "order" });
+                if (result === "pending") showMessage("Payment has not been confirmed yet", "info");
+                if (result === "failed") showMessage("Payment was not completed. Contact support if you were charged.", "error");
+              } catch (error) { showMessage(error instanceof Error ? error.message : "Unable to check payment", "error"); }
+              finally { setBusy(false); }
+            }}
           />
         )}
         {view === "wallet" && (
@@ -492,6 +556,15 @@ export function MiniApp() {
             authenticated={!!user}
             busy={busy}
             authState={authState}
+            pendingPayments={pendingPayments}
+            mobile={mobile}
+            setMobile={setMobile}
+            method={paymentMethod}
+            setMethod={setPaymentMethod}
+            resumePayment={(payment) => {
+              if (payment.checkoutUrl) openExternal(payment.checkoutUrl);
+              else { setPaymentFlow({ txRef: payment.txRef, method: paymentMethod, kind: "wallet" }); setView("payment"); }
+            }}
           />
         )}
         {view === "profile" && (
@@ -581,14 +654,14 @@ function HomeView({
   openService: (service: Service) => void;
   openServices: (platform?: string) => void;
 }) {
-  const platforms = platformOrder.slice(1).filter((name) => services.some((service) => service.platform === name));
+  const platforms = platformOrder.slice(1);
   return (
     <>
       <AppTop title="Dink Promotion" subtitle={user ? `Welcome, ${user.firstName}` : "Telegram Mini App"} />
       <section className="hero-card">
         <p className="eyebrow">DINK PROMOTION</p>
-        <h1>Promote your content with confidence.</h1>
-        <p className="hero-copy">Explore available services, order in ETB and follow every update in one place.</p>
+        <h1>Find a service for your content.</h1>
+        <p className="hero-copy">Pick a platform, see the price in ETB, and track your order here.</p>
         <div className="hero-actions">
           <button type="button" className="primary-button" onClick={() => openServices()}>Browse services</button>
           {authState === "telegram-required" && <span className="hero-note"><LogIn size={15} /> Open in Telegram to order</span>}
@@ -597,16 +670,14 @@ function HomeView({
 
       <section className="section-block">
         <SectionHeader title="Platforms" />
-        {platforms.length ? (
-          <div className="platform-grid">
-            {platforms.slice(0, 6).map((name) => (
+        <div className="platform-grid">
+            {platforms.map((name) => (
               <button type="button" className="platform-card" key={name} onClick={() => openServices(name)}>
                 <span className={`platform-icon ${platformClass(name)}`}><PlatformIcon platform={name} /></span>
                 <strong>{name.replace(" / Twitter", "")}</strong>
               </button>
             ))}
           </div>
-        ) : servicesState === "loading" ? <LoadingState /> : servicesState === "error" ? <ErrorState retry={retryServices} /> : <EmptyState title="Services coming soon" text="There are no services available to order right now. Check back soon." />}
       </section>
 
       <section className="section-block">
@@ -614,6 +685,7 @@ function HomeView({
         <div className="service-stack">
           {featured.map((service) => <ServiceRow key={service.id} service={service} onClick={() => openService(service)} />)}
         </div>
+        {servicesState === "loading" ? <LoadingState /> : servicesState === "error" ? <ErrorState retry={retryServices} /> : !services.length && <EmptyState title="Services coming soon" text="There are no services available to order right now. Check back soon." />}
       </section>
 
       <section className="trust-strip"><div><ShieldCheck size={19} /><span><strong>Payment verification</strong><small>Orders begin after payment is confirmed.</small></span></div><div><RefreshCw size={19} /><span><strong>Order updates</strong><small>Track the latest available order status.</small></span></div></section>
@@ -634,22 +706,25 @@ function ServicesView({ services, servicesState, retryServices, platform, setPla
   setSearch: (value: string) => void;
   openService: (service: Service) => void;
 }) {
+  const groups = [...platformOrder.slice(1), ...Array.from(new Set(services.map((service) => service.platform))).filter((name) => !platformOrder.includes(name))];
   return (
     <>
       <AppTop title="Services" subtitle="Choose what you want to promote" />
       <div className="search-box"><Search size={18} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services" /></div>
       <div className="chip-scroll" aria-label="Platforms">
         {platformOrder.map((item) => (
-          <button type="button" key={item} className={`chip ${platform === item ? "active" : ""}`} onClick={() => setPlatform(item)}>{item.replace(" / Twitter", "")}</button>
+          <button type="button" key={item} className={`chip ${platform === item ? "active" : ""}`} onClick={() => { setPlatform(item); setCategory("All"); }}>{item !== "All" && <PlatformIcon platform={item} size={16} />}{item.replace(" / Twitter", "")}</button>
         ))}
       </div>
       <div className="filter-row">
         <label><span>Type</span><select value={category} onChange={(e) => setCategory(e.target.value)}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
         <span className="result-count">{services.length} service{services.length === 1 ? "" : "s"}</span>
       </div>
-      <div className="service-stack">
-        {services.map((service) => <ServiceRow key={service.id} service={service} onClick={() => openService(service)} />)}
-      </div>
+      {platform === "All" ? groups.map((name) => {
+        const items = services.filter((service) => service.platform === name);
+        if (!items.length) return null;
+        return <section className="service-group" key={name}><div className="service-group-head"><span className={`service-icon ${platformClass(name)}`}><PlatformIcon platform={name} size={19} /></span><h2>{name.replace(" / Twitter", "")}</h2><small>{items.length}</small></div><div className="service-stack">{items.map((service) => <ServiceRow key={service.id} service={service} onClick={() => openService(service)} />)}</div></section>;
+      }) : <div className="service-stack">{services.map((service) => <ServiceRow key={service.id} service={service} onClick={() => openService(service)} />)}</div>}
       {servicesState === "loading" ? <LoadingState /> : servicesState === "error" ? <ErrorState retry={retryServices} /> : !services.length && <EmptyState title="No matching services" text="Try another platform, service type or search. If all filters are clear, there are no services available yet." />}
     </>
   );
@@ -659,7 +734,8 @@ function ServiceRow({ service, onClick }: { service: Service; onClick: () => voi
   return (
     <button type="button" className="service-row" onClick={onClick}>
       <span className={`service-icon ${platformClass(service.platform)}`}><PlatformIcon platform={service.platform} /></span>
-      <span className="service-copy"><strong>{service.name}</strong><small>{service.platform} · {service.category}</small><b>{unitPrice(service)}</b></span>
+      <span className="service-copy"><strong>{service.name}</strong><small>{service.category} · {service.minQuantity.toLocaleString()}–{service.maxQuantity.toLocaleString()} units</small></span>
+      <span className="service-price"><b>{money(service.pricePerThousandMinor)}</b><small>per 1,000</small></span>
       <ChevronRight size={19} />
     </button>
   );
@@ -705,7 +781,24 @@ function ServiceDetail({ service, quantity, setQuantity, link, setLink, back, on
   );
 }
 
-function CheckoutView({ order, balanceMinor, onPay, back, busy }: { order: Order; balanceMinor: number; onPay: (method: "chapa" | "wallet") => void; back: () => void; busy: boolean }) {
+function PaymentMethodButton({ method, selected, onClick }: { method: DirectMethod; selected: boolean; onClick: () => void }) {
+  const label = method === "telebirr" ? "Telebirr" : "CBE Birr";
+  return <button type="button" className={`direct-method ${selected ? "selected" : ""}`} onClick={onClick} aria-pressed={selected}>
+    <img src={method === "telebirr" ? "/telebirr.svg" : "/cbebirr.svg"} alt="" width={42} height={42} />
+    <span><strong>{label}</strong><small>Confirm on your phone</small></span>
+    <span className="method-radio" aria-hidden="true" />
+  </button>;
+}
+
+function MobileField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return <label className="field-label mobile-field">Mobile number
+    <input type="tel" inputMode="tel" autoComplete="tel-national" required pattern="(?:0[79][0-9]{8}|(?:\+?251)[79][0-9]{8})" value={value} onChange={(event) => onChange(event.target.value)} placeholder="09xxxxxxxx" />
+    <span className="field-help">Use the number registered with your selected payment app.</span>
+  </label>;
+}
+
+function CheckoutView({ order, balanceMinor, onPay, back, busy, mobile, setMobile }: { order: Order; balanceMinor: number; onPay: (method: DirectMethod | "wallet") => void; back: () => void; busy: boolean; mobile: string; setMobile: (value: string) => void }) {
+  const [method, setMethod] = useState<DirectMethod>("telebirr");
   return (
     <>
       <AppTop title="Complete payment" subtitle={order.publicId} back={back} />
@@ -716,18 +809,24 @@ function CheckoutView({ order, balanceMinor, onPay, back, busy }: { order: Order
         </div>
         <div className="checkout-total"><span>Total</span><strong>{money(order.amountMinor)}</strong></div>
       </section>
-      <section className="payment-card">
-        <h2>Choose payment method</h2>
-        <button type="button" className="payment-option chapa" onClick={() => onPay("chapa")} disabled={busy}>
-          <span className="payment-symbol">C</span><span><strong>Pay with Chapa</strong><small>Secure ETB checkout</small></span><ChevronRight size={20} />
-        </button>
-        <button type="button" className="payment-option" onClick={() => onPay("wallet")} disabled={busy || balanceMinor < order.amountMinor}>
-          <WalletCards size={24} /><span><strong>Dink Wallet</strong><small>{money(balanceMinor)} available{balanceMinor < order.amountMinor ? " · insufficient balance" : ""}</small></span><ChevronRight size={20} />
-        </button>
-      </section>
-      <p className="security-note"><ShieldCheck size={16} /> Orders are sent to the provider only after server-side payment confirmation.</p>
+      <form className="payment-card direct-payment" onSubmit={(event) => { event.preventDefault(); onPay(method); }}>
+        <h2>Pay directly</h2>
+        <div className="direct-methods"><PaymentMethodButton method="telebirr" selected={method === "telebirr"} onClick={() => setMethod("telebirr")} /><PaymentMethodButton method="cbebirr" selected={method === "cbebirr"} onClick={() => setMethod("cbebirr")} /></div>
+        <MobileField value={mobile} onChange={setMobile} />
+        <button type="submit" className="primary-button full" disabled={busy}>{busy ? <Loader2 className="spin" size={18} /> : null} Send payment request · {money(order.amountMinor)}</button>
+        <p className="security-note"><ShieldCheck size={16} /> Confirm the prompt on your phone. Your order starts only after payment is verified.</p>
+      </form>
+      {balanceMinor >= order.amountMinor && <button type="button" className="wallet-pay-link" onClick={() => onPay("wallet")} disabled={busy}><WalletCards size={17} /> Use existing wallet balance · {money(balanceMinor)}</button>}
     </>
   );
+}
+
+function PaymentPendingView({ flow, busy, onCheck, back }: { flow: PaymentFlow; busy: boolean; onCheck: () => void; back: () => void }) {
+  return <><AppTop title="Confirm payment" subtitle={flow.method === "telebirr" ? "Telebirr" : "CBE Birr"} back={back} />
+    <div className="payment-pending" role="status"><div className="pending-mark"><Clock3 size={30} /></div><h1>Check your phone</h1><p>Approve the payment request in {flow.method === "telebirr" ? "Telebirr" : "CBE Birr"}. This page will update when Chapa confirms your payment.</p><small>Reference: {flow.txRef}</small></div>
+    <button type="button" className="secondary-button full" onClick={onCheck} disabled={busy}>{busy ? <Loader2 size={17} className="spin" /> : <RefreshCw size={17} />} Check payment status</button>
+    <p className="security-note">Do not submit another payment while this request is pending. If you were charged but the status does not change, contact support with the reference above.</p>
+  </>;
 }
 
 function OrdersView({ orders, openOrder, refresh, busy, authenticated, authState }: { orders: Order[]; openOrder: (order: Order) => void; refresh: () => void; busy: boolean; authenticated: boolean; authState: string }) {
@@ -750,7 +849,7 @@ function OrdersView({ orders, openOrder, refresh, busy, authenticated, authState
   );
 }
 
-function OrderDetail({ order, back, refresh, refill, cancel, pay, busy }: { order: Order; back: () => void; refresh: () => void; refill: () => void; cancel: () => void; pay: () => void; busy: boolean }) {
+function OrderDetail({ order, back, refresh, refill, cancel, pay, checkPayment, busy }: { order: Order; back: () => void; refresh: () => void; refill: () => void; cancel: () => void; pay: () => void; checkPayment: () => void; busy: boolean }) {
   const canRefill = !!order.service?.refill && ["COMPLETED", "PARTIAL"].includes(order.status);
   const canCancel = !!order.service?.cancel && order.status === "PENDING";
   return (
@@ -771,9 +870,11 @@ function OrderDetail({ order, back, refresh, refill, cancel, pay, busy }: { orde
       {order.status === "PROVIDER_REVIEW" && <div className="notice danger"><CircleHelp size={18} /><span><strong>Manual review required</strong>Provider response was ambiguous, so Dink did not retry automatically to prevent duplicate fulfillment.</span></div>}
       {order.status === "PROVIDER_ERROR" && <div className="notice danger"><XCircle size={18} /><span><strong>Provider rejected the request</strong>The order is paid, but fulfillment needs admin attention.</span></div>}
       {order.status === "COMPLETED" && <div className="notice success"><Check size={18} /><span><strong>Completed</strong>The provider reports this order as completed.</span></div>}
-      {order.status === "AWAITING_PAYMENT" && <div className="notice warning"><Clock3 size={18} /><span><strong>Awaiting payment</strong>Return to checkout to finish payment.</span></div>}
+      {order.status === "AWAITING_PAYMENT" && !order.payment && <div className="notice warning"><Clock3 size={18} /><span><strong>Awaiting payment</strong>Return to checkout to finish payment.</span></div>}
+      {order.status === "AWAITING_PAYMENT" && order.payment && !order.payment.checkoutUrl && <div className="notice warning"><Clock3 size={18} /><span><strong>Payment request pending</strong>Check your phone, then refresh to see the verified status.</span></div>}
       <div className="action-stack">
         {order.status === "AWAITING_PAYMENT" && <button type="button" className="primary-button full" onClick={pay}>Continue to payment</button>}
+        {order.status === "AWAITING_PAYMENT" && order.payment && <button type="button" className="secondary-button full" onClick={checkPayment} disabled={busy}><RefreshCw size={17} /> Check payment confirmation</button>}
         <button type="button" className="secondary-button full" onClick={refresh} disabled={busy}><RefreshCw size={17} className={busy ? "spin" : ""} /> Refresh status</button>
         {canRefill && <button type="button" className="secondary-button full" onClick={refill} disabled={busy}><RefreshCw size={17} /> Request refill</button>}
         {canCancel && <button type="button" className="danger-button full" onClick={cancel} disabled={busy}>Cancel pending order</button>}
@@ -782,7 +883,7 @@ function OrderDetail({ order, back, refresh, refill, cancel, pay, busy }: { orde
   );
 }
 
-function WalletView({ balanceMinor, transactions, amount, setAmount, topUp, authenticated, busy, authState }: { balanceMinor: number; transactions: WalletTransaction[]; amount: string; setAmount: (value: string) => void; topUp: (event: FormEvent) => void; authenticated: boolean; busy: boolean; authState: string }) {
+function WalletView({ balanceMinor, transactions, pendingPayments, amount, setAmount, topUp, authenticated, busy, authState, mobile, setMobile, method, setMethod, resumePayment }: { balanceMinor: number; transactions: WalletTransaction[]; pendingPayments: PendingPayment[]; amount: string; setAmount: (value: string) => void; topUp: (event: FormEvent) => void; authenticated: boolean; busy: boolean; authState: string; mobile: string; setMobile: (value: string) => void; method: DirectMethod; setMethod: (value: DirectMethod) => void; resumePayment: (payment: PendingPayment) => void }) {
   return (
     <>
       <AppTop title="Wallet" subtitle="Pay faster with Dink balance" />
@@ -791,8 +892,11 @@ function WalletView({ balanceMinor, transactions, amount, setAmount, topUp, auth
           <section className="wallet-card"><span>Available balance</span><strong>{money(balanceMinor)}</strong><small>Refunds for eligible cancelled orders are returned here.</small></section>
           <form className="topup-form" onSubmit={topUp}>
             <label className="field-label">Add funds<div className="money-input"><span>ETB</span><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div></label>
-            <button className="primary-button full" disabled={busy}>{busy ? <Loader2 size={17} className="spin" /> : <CreditCard size={17} />} Continue with Chapa</button>
+            <div className="direct-methods"><PaymentMethodButton method="telebirr" selected={method === "telebirr"} onClick={() => setMethod("telebirr")} /><PaymentMethodButton method="cbebirr" selected={method === "cbebirr"} onClick={() => setMethod("cbebirr")} /></div>
+            <MobileField value={mobile} onChange={setMobile} />
+            <button className="primary-button full" disabled={busy}>{busy ? <Loader2 size={17} className="spin" /> : <CreditCard size={17} />} Send payment request</button>
           </form>
+          {!!pendingPayments.length && <section className="pending-list"><SectionHeader title="Pending payments" />{pendingPayments.map((payment) => <button type="button" key={payment.txRef} className="pending-row" onClick={() => resumePayment(payment)}><Clock3 size={18} /><span><strong>{money(payment.amountMinor)}</strong><small>{formatDate(payment.createdAt)} · Check status</small></span><ChevronRight size={18} /></button>)}</section>}
           <SectionHeader title="Recent transactions" />
           <div className="transaction-list">
             {transactions.map((tx) => (

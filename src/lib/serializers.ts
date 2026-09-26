@@ -51,6 +51,7 @@ export function serializeOrder(order: Order & { service?: Service; payment?: Pay
       ? {
           status: order.payment.status,
           checkoutUrl: order.payment.checkoutUrl,
+          txRef: order.payment.txRef,
         }
       : undefined,
   };

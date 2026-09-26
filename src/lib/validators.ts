@@ -7,11 +7,15 @@ export const createOrderSchema = z.object({
 });
 
 export const payOrderSchema = z.object({
-  method: z.enum(["chapa", "wallet"]),
+  method: z.enum(["telebirr", "cbebirr", "wallet"]),
+  mobile: z.string().trim().max(32).optional(),
 });
 
 export const walletTopUpSchema = z.object({
   amountMinor: z.number().int().min(1000).max(10_000_000),
+  method: z.enum(["telebirr", "cbebirr"]),
+  mobile: z.string().trim().max(32),
+  requestId: z.string().uuid(),
 });
 
 export const updateServiceSchema = z.object({
