@@ -41,7 +41,7 @@ async function startDirectPayment(input: {
       lastName: input.lastName,
     });
   } catch (error) {
-    if (error instanceof AppError && error.code === "CHAPA_DIRECT_CHARGE_FAILED") {
+    if (error instanceof AppError && error.code === "CHAPA_DIRECT_CHARGE_REJECTED") {
       await prisma.payment.updateMany({
         where: { id: input.paymentId, status: PaymentStatus.PENDING },
         data: { status: PaymentStatus.FAILED },
