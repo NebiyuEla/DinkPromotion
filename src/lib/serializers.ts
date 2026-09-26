@@ -30,6 +30,7 @@ export function serializeService(service: Service) {
 }
 
 export function serializeOrder(order: Order & { service?: Service; payment?: Payment | null }) {
+  const activePayment = order.payment && order.payment.status !== "FAILED" ? order.payment : null;
   return {
     id: order.id,
     publicId: order.publicId,
@@ -47,11 +48,11 @@ export function serializeOrder(order: Order & { service?: Service; payment?: Pay
     updatedAt: order.updatedAt.toISOString(),
     completedAt: order.completedAt?.toISOString() || null,
     service: order.service ? serializeService(order.service) : undefined,
-    payment: order.payment
+    payment: activePayment
       ? {
-          status: order.payment.status,
-          checkoutUrl: order.payment.checkoutUrl,
-          txRef: order.payment.txRef,
+          status: activePayment.status,
+          checkoutUrl: activePayment.checkoutUrl,
+          txRef: activePayment.txRef,
         }
       : undefined,
   };

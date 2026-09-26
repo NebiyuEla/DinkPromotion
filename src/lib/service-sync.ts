@@ -81,6 +81,10 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
     }
   }
 
+  const incompatible = await prisma.service.updateMany({
+    where: { provider: "PRM4U", compatible: false, active: true },
+    data: { active: false },
+  });
   const removed = providerIds.length
     ? await prisma.service.updateMany({
         where: { provider: "PRM4U", providerServiceId: { notIn: providerIds }, active: true },
@@ -88,6 +92,7 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
       })
     : { count: 0 };
 
+  const unpublished = incompatible.count + removed.count;
   if (actorId) {
     await prisma.auditLog.create({
       data: {
@@ -95,12 +100,12 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
         action: "provider.services.sync",
         entity: "Provider",
         entityId: "PRM4U",
-        metadata: { received: services.length, created, updated, unpublished: removed.count },
+        metadata: { received: services.length, created, updated, unpublished },
       },
     });
   }
 
-  return { received: services.length, created, updated, unpublished: removed.count };
+  return { received: services.length, created, updated, unpublished };
 }
 
 export function syncPrmServices(actorId?: string | null) {

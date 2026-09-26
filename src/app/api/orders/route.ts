@@ -4,12 +4,18 @@ import { prisma } from "@/lib/db";
 import { AppError, jsonError } from "@/lib/http";
 import { calculateOrderAmountMinor } from "@/lib/pricing";
 import { createOrderSchema } from "@/lib/validators";
-import { newPublicOrderId } from "@/lib/orders";
+import { newPublicOrderId, syncOpenProviderOrders } from "@/lib/orders";
 import { serializeOrder } from "@/lib/serializers";
 
 export async function GET() {
   try {
     const user = await requireUser();
+    try {
+      await syncOpenProviderOrders(user.id);
+    } catch (error) {
+      // A provider outage must not hide the customer's existing order history.
+      console.error("Customer provider status refresh failed", error);
+    }
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: { service: true, payment: true },

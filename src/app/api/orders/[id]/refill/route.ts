@@ -19,6 +19,10 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
     if (!["COMPLETED", "PARTIAL"].includes(order.status)) {
       throw new AppError("Refill is only available after delivery", 409, "REFILL_NOT_READY");
     }
+    if (order.refillId || order.refillStatus) {
+      throw new AppError("A refill request has already been submitted for this order", 409, "REFILL_ALREADY_REQUESTED");
+    }
+
     const refillId = await requestPrmRefill(order.providerOrderId);
     await prisma.order.update({
       where: { id: order.id },

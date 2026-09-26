@@ -96,6 +96,13 @@ export async function requestPrmRefill(orderId: string) {
   return String(response.refill);
 }
 
+export async function getPrmRefillStatus(refillId: string) {
+  const response = await prmRequest<{ status?: string; error?: string }>({ action: "refill_status", refill: refillId });
+  if (response.error) throw new PRM4UError(response.error, true);
+  if (!response.status) throw new PRM4UError("Provider did not return a refill status", false);
+  return response.status;
+}
+
 export async function cancelPrmOrder(orderId: string) {
   const response = await prmRequest<Array<{ order: number | string; cancel: number | { error?: string } }>>({
     action: "cancel",
@@ -152,6 +159,7 @@ export function detectCategory(name: string) {
 }
 
 export function isSupportedPrmType(type: string) {
-  const value = type.trim().toLowerCase();
-  return value === "default" || value === "package";
+  // Dink's checkout is quantity-based. PRM4U Package orders accept only a link,
+  // so treating Package rates as a per-1,000 quantity price would charge/order incorrectly.
+  return type.trim().toLowerCase() === "default";
 }
