@@ -96,6 +96,13 @@ export async function requestPrmRefill(orderId: string) {
   return String(response.refill);
 }
 
+export async function getPrmRefillStatus(refillId: string) {
+  const response = await prmRequest<{ status?: string; error?: string }>({ action: "refill_status", refill: refillId });
+  if (response.error) throw new PRM4UError(response.error, true);
+  if (!response.status) throw new PRM4UError("Provider did not return a refill status", false);
+  return response.status;
+}
+
 export async function cancelPrmOrder(orderId: string) {
   const response = await prmRequest<Array<{ order: number | string; cancel: number | { error?: string } }>>({
     action: "cancel",
