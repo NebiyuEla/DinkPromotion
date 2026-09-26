@@ -6,6 +6,13 @@ import { isPrmCatalogStale, syncPrmServices } from "@/lib/service-sync";
 
 export const dynamic = "force-dynamic";
 
+function customerMinimumLimit(category: string) {
+  if (["Followers", "Members", "Subscribers"].includes(category)) return 500;
+  if (["Comments", "Poll Votes", "Retweets"].includes(category)) return 100;
+  if (["Likes", "Reactions", "Shares", "Saves"].includes(category)) return 500;
+  return 1000;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const platform = searchParams.get("platform")?.trim();
@@ -42,7 +49,12 @@ export async function GET(request: NextRequest) {
     getDiscountMap(),
   ]);
 
-  const customerServices = services.map((service) => {
+  // Provider panels sometimes expose wholesale-only minimums that are technically
+  // orderable but make no sense in a consumer Mini App. Keep those rows available
+  // to admins while preventing impractical quantities from reaching customers.
+  const visibleServices = services.filter((service) => service.minQuantity <= customerMinimumLimit(service.category));
+
+  const customerServices = visibleServices.map((service) => {
     const serialized = serializeService(service);
     const discounted = discountedServicePrice(service.pricePerThousandMinor, service.platform, discounts);
     return {
@@ -54,8 +66,8 @@ export async function GET(request: NextRequest) {
   });
 
   // Keep the customer request fast. When the cached provider catalog is older than
-  // ten minutes, refresh it after the response. Newly added supported services are
-  // published automatically; services removed by PRM4U are automatically hidden.
+  // ten minutes, refresh it after the response. The sync keeps the full provider
+  // catalog in admin and automatically publishes only the curated customer set.
   after(async () => {
     try {
       if (await isPrmCatalogStale()) await syncPrmServices();
