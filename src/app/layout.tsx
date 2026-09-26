@@ -6,6 +6,7 @@ import "@fontsource/dm-sans/600.css";
 import "@fontsource/dm-sans/700.css";
 import "@fontsource/dm-sans/800.css";
 import "./globals.css";
+import "./polish.css";
 
 export const metadata: Metadata = {
   title: "Dink Promotion",
@@ -27,6 +28,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preload" href="/dink-promotion-mark.png" as="image" />
+        <link rel="preload" href="/dink-promotion-logo.png" as="image" />
+      </head>
       <body>
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         {children}
