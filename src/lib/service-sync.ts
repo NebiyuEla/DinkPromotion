@@ -10,6 +10,7 @@ export type ServiceSyncResult = {
 };
 
 let activeSync: Promise<ServiceSyncResult> | null = null;
+const POSTGRES_INT_MAX = 2_147_483_647;
 
 function cleanName(name: string) {
   return name.replace(/\s+/g, " ").replace(/^[-|•\s]+|[-|•\s]+$/g, "").trim().slice(0, 120) || "Social media service";
@@ -17,7 +18,8 @@ function cleanName(name: string) {
 
 function quantity(value: string) {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(1, Math.trunc(parsed)) : 1;
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(POSTGRES_INT_MAX, Math.max(1, Math.trunc(parsed)));
 }
 
 type ProviderMetadata = {
@@ -81,14 +83,16 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
 
     const compatible = isSupportedPrmType(item.type);
     const platform = detectPlatform(item.name, item.category);
+    const minQuantity = quantity(item.min);
+    const maxQuantity = Math.max(minQuantity, quantity(item.max));
     const metadata: ProviderMetadata = {
       providerServiceId,
       providerName: item.name,
       providerType: item.type,
       providerCategory: item.category,
       providerRateUsd: item.rate,
-      minQuantity: quantity(item.min),
-      maxQuantity: quantity(item.max),
+      minQuantity,
+      maxQuantity,
       refill: Boolean(item.refill),
       cancel: Boolean(item.cancel),
       compatible,
@@ -224,9 +228,8 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
     `;
   }
 
-  // This write is the completion marker. A terminated/partial sync never advances
-  // catalog freshness, so a later request safely retries instead of accepting a
-  // half-refreshed provider catalog as current.
+  // This all-row write is the completion marker. Any sync that dies before here
+  // leaves at least one older row behind and is considered stale on the next run.
   await prisma.service.updateMany({
     where: { provider: "PRM4U" },
     data: { lastProviderSyncAt: now },
@@ -258,11 +261,11 @@ export function syncPrmServices(actorId?: string | null) {
 }
 
 export async function isPrmCatalogStale(maxAgeMs = 10 * 60 * 1000) {
-  const latest = await prisma.service.findFirst({
+  const freshness = await prisma.service.aggregate({
     where: { provider: "PRM4U" },
-    orderBy: { lastProviderSyncAt: "desc" },
-    select: { lastProviderSyncAt: true },
+    _min: { lastProviderSyncAt: true },
+    _count: { _all: true },
   });
-  if (!latest) return true;
-  return Date.now() - latest.lastProviderSyncAt.getTime() > maxAgeMs;
+  if (freshness._count._all === 0 || !freshness._min.lastProviderSyncAt) return true;
+  return Date.now() - freshness._min.lastProviderSyncAt.getTime() > maxAgeMs;
 }
