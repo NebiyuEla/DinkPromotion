@@ -5,6 +5,7 @@ import { assertChapaConfigured, initiateDirectCharge, normalizeEthiopianMobile }
 import { prisma } from "@/lib/db";
 import { AppError, jsonError } from "@/lib/http";
 import { newPaymentRef, payOrderFromWallet } from "@/lib/orders";
+import { directPaymentTotalMinor } from "@/lib/payment-fee";
 import { serializeOrder } from "@/lib/serializers";
 import { payOrderSchema } from "@/lib/validators";
 
@@ -70,14 +71,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (order.status !== "AWAITING_PAYMENT") {
       throw new AppError("This order is no longer awaiting payment", 409, "ORDER_NOT_PAYABLE");
     }
-
     if (order.payment?.status === PaymentStatus.SUCCESS) {
       throw new AppError("This order is already paid", 409, "ORDER_ALREADY_PAID");
     }
     if (order.payment?.status === PaymentStatus.PENDING) {
       return NextResponse.json(order.payment.checkoutUrl
-        ? { checkoutUrl: order.payment.checkoutUrl, txRef: order.payment.txRef }
-        : { status: "pending", txRef: order.payment.txRef });
+        ? { checkoutUrl: order.payment.checkoutUrl, txRef: order.payment.txRef, amountMinor: order.payment.amountMinor }
+        : { status: "pending", txRef: order.payment.txRef, amountMinor: order.payment.amountMinor });
     }
 
     if (!mobile) throw new AppError("Enter your mobile number", 400, "MOBILE_REQUIRED");
@@ -99,28 +99,29 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       });
       if (claimed.count === 0) {
         const current = await prisma.payment.findUniqueOrThrow({ where: { id: order.payment.id } });
-        return NextResponse.json({ status: current.status.toLowerCase(), txRef: current.txRef, checkoutUrl: current.checkoutUrl });
+        return NextResponse.json({ status: current.status.toLowerCase(), txRef: current.txRef, checkoutUrl: current.checkoutUrl, amountMinor: current.amountMinor });
       }
       const result = await startDirectPayment({
         paymentId: order.payment.id,
         txRef: retryTxRef,
-        amountMinor: order.amountMinor,
+        amountMinor: order.payment.amountMinor,
         mobile: normalizedMobile,
         method,
         firstName: user.firstName,
         lastName: user.lastName,
       });
       await rememberPaymentMobile(user.id, normalizedMobile);
-      return NextResponse.json(result);
+      return NextResponse.json({ ...result, amountMinor: order.payment.amountMinor });
     }
 
+    const chargeAmountMinor = directPaymentTotalMinor(order.amountMinor);
     const payment = await prisma.payment.create({
       data: {
         txRef: newPaymentRef("ORDER"),
         userId: user.id,
         orderId: order.id,
         kind: PaymentKind.ORDER,
-        amountMinor: order.amountMinor,
+        amountMinor: chargeAmountMinor,
       },
     });
     const result = await startDirectPayment({
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       lastName: user.lastName,
     });
     await rememberPaymentMobile(user.id, normalizedMobile);
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, amountMinor: payment.amountMinor });
   } catch (error) {
     return jsonError(error);
   }
