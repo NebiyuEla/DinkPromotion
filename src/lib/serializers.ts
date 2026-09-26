@@ -26,6 +26,8 @@ export function serializeService(service: Service) {
     description: service.description,
     platform: service.platform,
     category: service.category,
+    type: service.providerType,
+    providerCategory: service.providerCategory,
     minQuantity: service.minQuantity,
     maxQuantity: service.maxQuantity,
     refill: service.refill,
