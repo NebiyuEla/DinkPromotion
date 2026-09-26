@@ -10,22 +10,28 @@ if (!/^https:\/\//i.test(appUrl)) throw new Error("APP_URL must be a valid HTTPS
 require("./index.js");
 
 let reconciling = false;
+let maintaining = false;
+
+async function postBackend(path, timeoutMs = 45_000) {
+  const response = await fetch(`${appUrl}${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: "{}",
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(result?.error || `Backend ${response.status}`);
+  return result;
+}
 
 async function reconcilePayments() {
   if (reconciling) return;
   reconciling = true;
   try {
-    const response = await fetch(`${appUrl}/api/bot/reconcile`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${token}`,
-      },
-      body: "{}",
-      signal: AbortSignal.timeout(45_000),
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(result?.error || `Backend ${response.status}`);
+    const result = await postBackend("/api/bot/reconcile");
     if (result?.succeeded || result?.failed || result?.errors) {
       console.log("Payment reconciliation", result);
     }
@@ -38,10 +44,29 @@ async function reconcilePayments() {
   }
 }
 
-// Reconcile shortly after startup, then once a minute. This closes the gap where
-// a customer approves a direct payment and closes the Mini App before its polling
-// request can confirm the transaction.
-const startupTimer = setTimeout(() => void reconcilePayments(), 5_000);
+async function runMaintenance() {
+  if (maintaining) return;
+  maintaining = true;
+  try {
+    const result = await postBackend("/api/bot/maintenance", 55_000);
+    if (result?.catalog || result?.orders?.updated) console.log("Provider maintenance", result);
+  } catch (error) {
+    // Catalog and order syncing are eventually consistent. A temporary provider
+    // outage must never take the customer-facing bot offline.
+    console.warn("Provider maintenance skipped", error);
+  } finally {
+    maintaining = false;
+  }
+}
+
+// Payment verification runs frequently so a customer can approve a request and
+// close the Mini App. Provider/catalog maintenance runs less often; the backend
+// itself only refreshes the catalog when its ten-minute freshness window expires.
+const startupPaymentTimer = setTimeout(() => void reconcilePayments(), 5_000);
+const startupMaintenanceTimer = setTimeout(() => void runMaintenance(), 15_000);
 const reconciliationTimer = setInterval(() => void reconcilePayments(), 60_000);
-startupTimer.unref?.();
+const maintenanceTimer = setInterval(() => void runMaintenance(), 5 * 60_000);
+startupPaymentTimer.unref?.();
+startupMaintenanceTimer.unref?.();
 reconciliationTimer.unref?.();
+maintenanceTimer.unref?.();
