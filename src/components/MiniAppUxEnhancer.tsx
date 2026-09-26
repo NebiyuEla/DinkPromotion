@@ -105,11 +105,16 @@ export function MiniAppUxEnhancer() {
     }
 
     const nativeScrollTo = window.scrollTo.bind(window);
-    const patchedScrollTo: typeof window.scrollTo = ((...args: Parameters<typeof window.scrollTo>) => {
-      if (typeof args[0] === "object" && args[0] !== null) {
-        return nativeScrollTo({ ...args[0], behavior: "auto" });
+    const patchedScrollTo = ((arg1?: number | ScrollToOptions, arg2?: number) => {
+      if (typeof arg1 === "object" && arg1 !== null) {
+        nativeScrollTo({ ...arg1, behavior: "auto" });
+        return;
       }
-      return nativeScrollTo(...args);
+      if (typeof arg1 === "number" && typeof arg2 === "number") {
+        nativeScrollTo(arg1, arg2);
+        return;
+      }
+      nativeScrollTo(0, 0);
     }) as typeof window.scrollTo;
     window.scrollTo = patchedScrollTo;
 
