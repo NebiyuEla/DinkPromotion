@@ -25,7 +25,10 @@ export function serializeService(service: Service) {
     name: service.displayName,
     description: service.description,
     platform: service.platform,
-    category: service.category,
+    // PRM4U v2 explicitly exposes `type` separately from provider `category`.
+    // The customer-facing "Type" filter should therefore use providerType.
+    category: service.providerType || service.category,
+    providerCategory: service.providerCategory,
     minQuantity: service.minQuantity,
     maxQuantity: service.maxQuantity,
     refill: service.refill,
