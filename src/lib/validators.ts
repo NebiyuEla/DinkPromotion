@@ -12,7 +12,7 @@ export const payOrderSchema = z.object({
 });
 
 export const walletTopUpSchema = z.object({
-  amountMinor: z.number().int().min(1000).max(10_000_000),
+  amountMinor: z.number().int().min(1000).max(5_000_000),
   method: z.enum(["telebirr", "cbebirr"]),
   mobile: z.string().trim().max(32),
   requestId: z.string().uuid(),
