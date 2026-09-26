@@ -176,6 +176,14 @@ model WalletTransaction {
   @@index([userId, createdAt])
 }
 
+model DiscountRule {
+  scope     String   @id
+  percent   Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model AuditLog {
   id        String   @id @default(cuid())
   actorId   String?
