@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get("search")?.trim();
   const featured = searchParams.get("featured") === "true";
   const requestedTake = Math.min(Math.max(Number(searchParams.get("take") || 100), 1), 300);
-  // The Mini App filters the initial catalog client-side. Give that unfiltered
-  // request enough services to contain every main platform instead of only the
-  // cheapest first 100.
-  const take = platform || category || search || featured ? requestedTake : Math.max(requestedTake, 300);
+  // The current Mini App filters its catalog client-side. Return the full current
+  // orderable catalog on the initial unfiltered request so a valid service is not
+  // silently missing simply because it sorts after the first 300 rows.
+  const take = platform || category || search || featured ? requestedTake : 1200;
 
   const services = await prisma.service.findMany({
     where: {
