@@ -12,7 +12,16 @@ const profileSchema = z.object({
   lastName: z.string().max(120).nullish(),
   username: z.string().max(120).nullish(),
   languageCode: z.string().max(12).nullish(),
+  view: z.enum(["all", "profile", "wallet", "orders", "offers", "topup", "support"]).optional().default("all"),
   syncOrders: z.boolean().optional().default(false),
+});
+
+const orderWhere = (userId: string) => ({
+  userId,
+  OR: [
+    { status: { not: "AWAITING_PAYMENT" as const } },
+    { payment: { is: { status: { in: [PaymentStatus.PENDING, PaymentStatus.SUCCESS] } } } },
+  ],
 });
 
 export async function POST(request: NextRequest) {
@@ -29,17 +38,84 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const base = {
+      user: {
+        telegramId: user.telegramId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        languageCode: user.languageCode,
+        paymentMobile: localMobile(user.paymentMobile),
+      },
+      supportUrl: process.env.NEXT_PUBLIC_SUPPORT_URL || null,
+    };
+
+    if (profile.view === "profile" || profile.view === "support") {
+      return NextResponse.json(base);
+    }
+
+    if (profile.view === "wallet") {
+      const [wallet, transactions] = await Promise.all([
+        prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
+        prisma.walletTransaction.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 4 }),
+      ]);
+      return NextResponse.json({
+        ...base,
+        balanceMinor: wallet.balanceMinor,
+        transactions: transactions.map((tx) => ({
+          type: tx.type,
+          amountMinor: tx.amountMinor,
+          description: tx.description,
+          createdAt: tx.createdAt.toISOString(),
+        })),
+      });
+    }
+
+    if (profile.view === "topup") {
+      const wallet = await prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } });
+      return NextResponse.json({ ...base, balanceMinor: wallet.balanceMinor });
+    }
+
+    if (profile.view === "orders") {
+      const orders = await prisma.order.findMany({
+        where: orderWhere(user.id),
+        include: { service: true, payment: true },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      });
+      const activeOrders = orders.filter((order) => !["COMPLETED", "CANCELED", "FAILED"].includes(order.status)).length;
+      return NextResponse.json({
+        ...base,
+        activeOrders,
+        orders: orders.map((order) => ({
+          publicId: order.publicId,
+          serviceName: order.service.displayName,
+          platform: order.service.platform,
+          quantity: order.quantity,
+          amountMinor: order.amountMinor,
+          status: order.status,
+          paymentStatus: order.payment?.status || null,
+          createdAt: order.createdAt.toISOString(),
+        })),
+      });
+    }
+
+    if (profile.view === "offers") {
+      const discounts = await prisma.discountRule.findMany({
+        where: { active: true, percent: { gt: 0 } },
+        orderBy: { scope: "asc" },
+      });
+      return NextResponse.json({
+        ...base,
+        offers: discounts.map((rule) => ({ scope: rule.scope, percent: rule.percent })),
+      });
+    }
+
     const [wallet, transactions, orders, discounts, pendingTopUp] = await Promise.all([
-      prisma.walletAccount.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} }),
+      prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
       prisma.walletTransaction.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 4 }),
       prisma.order.findMany({
-        where: {
-          userId: user.id,
-          OR: [
-            { status: { not: "AWAITING_PAYMENT" } },
-            { payment: { is: { status: { in: [PaymentStatus.PENDING, PaymentStatus.SUCCESS] } } } },
-          ],
-        },
+        where: orderWhere(user.id),
         include: { service: true, payment: true },
         orderBy: { createdAt: "desc" },
         take: 5,
@@ -54,14 +130,7 @@ export async function POST(request: NextRequest) {
     const activeOrders = orders.filter((order) => !["COMPLETED", "CANCELED", "FAILED"].includes(order.status)).length;
 
     return NextResponse.json({
-      user: {
-        telegramId: user.telegramId,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        username: user.username,
-        languageCode: user.languageCode,
-        paymentMobile: localMobile(user.paymentMobile),
-      },
+      ...base,
       balanceMinor: wallet.balanceMinor,
       activeOrders,
       orders: orders.map((order) => ({
@@ -84,7 +153,6 @@ export async function POST(request: NextRequest) {
       pendingTopUp: pendingTopUp
         ? { txRef: pendingTopUp.txRef, amountMinor: pendingTopUp.amountMinor, createdAt: pendingTopUp.createdAt.toISOString() }
         : null,
-      supportUrl: process.env.NEXT_PUBLIC_SUPPORT_URL || null,
     });
   } catch (error) {
     return jsonError(error);
