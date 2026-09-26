@@ -1,0 +1,296 @@
+/* Final Mini App theme, iPhone and interaction corrections. */
+html,
+body,
+.localized-mini-app,
+.mini-app-shell,
+.mini-app-content {
+  overscroll-behavior-y: none;
+  scroll-behavior: auto !important;
+}
+
+html[data-theme="light"] {
+  --ink: #111714;
+  --muted: #69736e;
+  --line: #dfe6e2;
+  --surface: #ffffff;
+  --bg: #f6f8f7;
+  --soft: #eef3f0;
+  --brand-dark: #18b92a;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --ink: #f4f7f5;
+  --muted: #a2aca7;
+  --line: #2b332f;
+  --surface: #151a17;
+  --bg: #0d110f;
+  --soft: #1b211e;
+  --brand-dark: #43df55;
+  color-scheme: dark;
+}
+
+html[data-theme="light"] body,
+html[data-theme="light"] .localized-mini-app,
+html[data-theme="light"] .mini-app-shell,
+html[data-theme="light"] .mini-app-content,
+html[data-theme="dark"] body,
+html[data-theme="dark"] .localized-mini-app,
+html[data-theme="dark"] .mini-app-shell,
+html[data-theme="dark"] .mini-app-content {
+  background: var(--bg) !important;
+  color: var(--ink) !important;
+}
+
+/* Top controls: one clean row instead of two tiny stacked controls. */
+.app-preferences {
+  position: absolute !important;
+  top: max(10px, env(safe-area-inset-top)) !important;
+  right: max(14px, calc((100vw - 520px) / 2 + 14px)) !important;
+  width: auto !important;
+  display: flex !important;
+  align-items: center;
+  gap: 7px !important;
+  pointer-events: none;
+}
+.preference-button {
+  pointer-events: auto;
+  height: 34px !important;
+  min-height: 34px;
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  background: color-mix(in srgb, var(--surface) 96%, transparent) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,.08) !important;
+  transform: none !important;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease !important;
+}
+.theme-toggle { width: 36px !important; min-width: 36px !important; }
+.language-segmented {
+  width: auto !important;
+  min-width: 76px !important;
+  padding: 0 9px !important;
+  gap: 5px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+.language-segmented span { opacity: .48; }
+.language-segmented span.active { opacity: 1; color: var(--brand); }
+.preference-button:active { opacity: .72; transform: none !important; }
+
+/* App header leaves room for preference controls on every iPhone width. */
+.app-top {
+  min-height: 72px !important;
+  grid-template-columns: 52px minmax(0, 1fr) 96px !important;
+  padding-top: max(10px, env(safe-area-inset-top)) !important;
+}
+.app-top-copy { text-align: left !important; }
+.app-top-copy strong { font-size: 18px !important; line-height: 1.15 !important; }
+.app-top-copy span { font-size: 12px !important; line-height: 1.2 !important; }
+.brand-compact { width: 48px !important; height: 48px !important; }
+
+/* Cards and inputs must follow the active theme. */
+.mini-app-v2 :where(
+  .search-box,
+  .platform-filter-button,
+  .type-filter-trigger,
+  .type-filter-panel,
+  .type-filter-panel button,
+  .platform-card,
+  .service-row,
+  .order-row,
+  .detail-card,
+  .service-title-card,
+  .order-form,
+  .checkout-summary,
+  .payment-card,
+  .direct-method,
+  .quantity-control,
+  .money-input,
+  .order-detail-head,
+  .progress-card,
+  .wallet-card,
+  .topup-form,
+  .pending-row,
+  .transaction-row,
+  .profile-card,
+  .profile-stats > div,
+  .menu-list,
+  .menu-list > button,
+  .menu-static,
+  .support-card,
+  .telegram-required,
+  .empty-state,
+  .wallet-pay-link,
+  .secondary-button,
+  .icon-button
+) {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+
+.mini-app-v2 :where(input, select, textarea) {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+  caret-color: var(--brand) !important;
+  -webkit-text-fill-color: var(--ink);
+  opacity: 1;
+}
+.mini-app-v2 :where(input)::placeholder { color: color-mix(in srgb, var(--muted) 72%, transparent) !important; opacity: 1; }
+.mini-app-v2 .money-input > span { background: var(--soft) !important; color: var(--muted) !important; }
+
+/* Fix the white filter/stat blocks seen in dark mode. */
+html[data-theme="dark"] .platform-filter-button,
+html[data-theme="dark"] .profile-stats > div,
+html[data-theme="dark"] .money-input input,
+html[data-theme="dark"] .quantity-control input,
+html[data-theme="dark"] .mobile-field input {
+  background: #151a17 !important;
+  color: #f4f7f5 !important;
+  -webkit-text-fill-color: #f4f7f5 !important;
+}
+html[data-theme="dark"] .platform-filter-button.active {
+  background: #1d2a20 !important;
+  border-color: #3ad84c !important;
+  color: #59e56a !important;
+}
+html[data-theme="light"] .platform-filter-button.active {
+  background: #eafbed !important;
+  border-color: #29d63b !important;
+  color: #168a24 !important;
+}
+
+/* Filters use a compact grid and never horizontally jump. */
+.platform-filter {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  margin: 10px 0 12px !important;
+}
+.platform-filter-button {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 46px !important;
+  justify-content: center !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 14px !important;
+  transform: none !important;
+  transition: background-color 110ms ease, border-color 110ms ease, color 110ms ease !important;
+}
+.platform-filter-button:active,
+.nav-button:active,
+.menu-list > button:active,
+.service-row:active,
+.platform-card:active { transform: none !important; }
+
+.type-filter-wrap { position: relative; z-index: 12; margin-bottom: 16px !important; }
+.type-filter-trigger { min-height: 58px !important; }
+.type-filter-panel {
+  max-height: min(44vh, 340px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  border-radius: 16px !important;
+  box-shadow: 0 14px 36px rgba(0,0,0,.22) !important;
+}
+.type-filter-panel button { min-height: 46px !important; }
+
+/* Quantity: formatted number, exact min/max, iPhone numeric keyboard. */
+.quantity-control { overflow: hidden; }
+.quantity-control input {
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  font-weight: 800 !important;
+}
+.field-help { color: var(--muted) !important; font-variant-numeric: tabular-nums; }
+
+/* Profile actions need visible separation; no attached/tight rows. */
+.profile-stats { gap: 10px !important; background: transparent !important; }
+.profile-stats > div { border: 1px solid var(--line) !important; border-radius: 16px !important; padding: 15px !important; }
+.menu-list {
+  display: grid !important;
+  gap: 10px !important;
+  padding: 10px !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+.menu-list > button,
+.menu-static {
+  min-height: 72px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+}
+.menu-list > button + button,
+.menu-static + .menu-static { border-top: 1px solid var(--line) !important; }
+
+/* Reduce expensive visual work during page changes. */
+.mini-app-content > * { animation: none !important; }
+.mini-app-v2 button { touch-action: manipulation; }
+.service-row,
+.order-row,
+.platform-card,
+.menu-list > button,
+.nav-button { transition-duration: 90ms !important; }
+
+/* Bottom navigation respects iPhone Home Indicator. */
+.bottom-nav {
+  padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  min-height: calc(68px + env(safe-area-inset-bottom)) !important;
+  background: color-mix(in srgb, var(--surface) 96%, transparent) !important;
+  border-color: var(--line) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.mini-app-content { padding-bottom: calc(94px + env(safe-area-inset-bottom)) !important; }
+.nav-button { color: var(--muted) !important; }
+.nav-button.active { color: var(--brand) !important; }
+
+/* Dark hero remains deliberately dark; everything else follows theme. */
+.hero-card { background: #111513 !important; color: #f6f8f7 !important; border-color: #29312d !important; }
+.hero-card .hero-copy,
+.hero-card .hero-note { color: #aab4af !important; }
+.primary-button { color: #071d0a !important; }
+
+/* Prevent clipped long service names and Amharic labels. */
+.service-copy,
+.order-copy,
+.checkout-service > span:last-child,
+.app-top-copy,
+.menu-list span { min-width: 0; }
+.service-copy strong,
+.order-copy strong,
+.checkout-service strong { overflow-wrap: anywhere; }
+.localized-mini-app[data-language="am"] .mini-app-v2,
+.localized-mini-app[data-language="am"] .mini-app-v2 button,
+.localized-mini-app[data-language="am"] .mini-app-v2 input,
+.localized-mini-app[data-language="am"] .mini-app-v2 select {
+  font-family: "Noto Sans Ethiopic", "Abyssinica SIL", "Nyala", "Segoe UI", Arial, sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+@media (max-width: 430px) {
+  .mini-app-content { padding-left: 12px !important; padding-right: 12px !important; }
+  .app-preferences { right: 12px !important; }
+  .app-top { grid-template-columns: 50px minmax(0, 1fr) 92px !important; }
+  .app-top-copy strong { font-size: 17px !important; }
+  .platform-filter { gap: 7px !important; }
+  .platform-filter-button { height: 44px !important; font-size: 12px !important; }
+  .direct-methods { gap: 8px !important; }
+  .direct-method { min-width: 0 !important; padding: 10px !important; }
+  .direct-method img { width: 38px !important; height: 38px !important; }
+}
+
+@media (max-width: 360px) {
+  .language-segmented { min-width: 70px !important; padding-inline: 7px !important; }
+  .app-top { grid-template-columns: 46px minmax(0, 1fr) 88px !important; }
+  .platform-filter { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
