@@ -59,6 +59,7 @@ export function serializeOrder(order: Order & { service?: Service; payment?: Pay
           status: activePayment.status,
           checkoutUrl: activePayment.checkoutUrl,
           txRef: activePayment.txRef,
+          amountMinor: activePayment.amountMinor,
         }
       : undefined,
   };
