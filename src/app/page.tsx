@@ -1,5 +1,5 @@
-import { MiniAppV2 } from "@/components/MiniAppV2";
+import { LocalizedMiniApp } from "@/components/LocalizedMiniApp";
 
 export default function Page() {
-  return <MiniAppV2 />;
+  return <LocalizedMiniApp />;
 }
