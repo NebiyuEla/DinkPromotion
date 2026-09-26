@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { serializeService } from "@/lib/serializers";
+import { isPrmCatalogStale, syncPrmServices } from "@/lib/service-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -32,5 +33,17 @@ export async function GET(request: NextRequest) {
     orderBy: [{ featured: "desc" }, { sortOrder: "asc" }, { pricePerThousandMinor: "asc" }],
     take,
   });
+
+  // Keep the customer request fast. When the cached provider catalog is older than
+  // ten minutes, refresh it after the response. New provider services are imported
+  // unpublished; services removed by PRM4U are automatically unpublished.
+  after(async () => {
+    try {
+      if (await isPrmCatalogStale()) await syncPrmServices();
+    } catch (error) {
+      console.error("Automatic PRM4U catalog sync failed", error);
+    }
+  });
+
   return NextResponse.json({ services: services.map(serializeService) });
 }
