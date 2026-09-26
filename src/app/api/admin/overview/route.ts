@@ -7,14 +7,23 @@ import { serializeOrder } from "@/lib/serializers";
 export async function GET() {
   try {
     await requireAdmin();
-    const [customers, services, activeServices, orders, revenue, latest] = await Promise.all([
-      prisma.user.count(),
-      prisma.service.count(),
-      prisma.service.count({ where: { active: true } }),
-      prisma.order.count(),
-      prisma.order.aggregate({ where: { status: { not: "AWAITING_PAYMENT" } }, _sum: { amountMinor: true } }),
-      prisma.order.findMany({ include: { service: true, payment: true }, orderBy: { createdAt: "desc" }, take: 20 }),
-    ]);
+
+    // Keep admin reads sequential so a single dashboard request does not fan out
+    // into several database sessions on a small Supabase pool.
+    const customers = await prisma.user.count();
+    const services = await prisma.service.count();
+    const activeServices = await prisma.service.count({ where: { active: true } });
+    const orders = await prisma.order.count();
+    const revenue = await prisma.order.aggregate({
+      where: { status: { not: "AWAITING_PAYMENT" } },
+      _sum: { amountMinor: true },
+    });
+    const latest = await prisma.order.findMany({
+      include: { service: true, payment: true },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+
     return NextResponse.json({
       customers,
       services,
