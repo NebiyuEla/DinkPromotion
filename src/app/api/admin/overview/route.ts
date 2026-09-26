@@ -12,7 +12,7 @@ export async function GET() {
     // into several database sessions on a small Supabase pool.
     const customers = await prisma.user.count();
     const services = await prisma.service.count();
-    const activeServices = await prisma.service.count({ where: { active: true } });
+    const activeServices = await prisma.service.count({ where: { active: true, compatible: true } });
     const orders = await prisma.order.count();
     const revenue = await prisma.order.aggregate({
       where: { status: { not: "AWAITING_PAYMENT" } },
