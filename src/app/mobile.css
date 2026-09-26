@@ -1,0 +1,11 @@
+@media (max-width: 620px) {
+  .admin-table td > strong,
+  .admin-table td > small {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .admin-table td > small {
+    margin-top: -4px;
+  }
+}
