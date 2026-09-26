@@ -10,6 +10,7 @@ import "./polish.css";
 import "./mobile.css";
 import "./interaction-fixes.css";
 import "./preferences.css";
+import "./checkout-fee.css";
 
 export const metadata: Metadata = {
   title: "Dink Promotion",
