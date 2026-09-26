@@ -1,3 +1,4 @@
+import { OrderStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -32,6 +33,26 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     }
 
     return NextResponse.json({ order: serializeOrder(order) });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+export async function DELETE(_: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireUser();
+    const { id } = await context.params;
+    const order = await prisma.order.findFirst({
+      where: { id, userId: user.id },
+      include: { payment: true },
+    });
+    if (!order) throw new AppError("Order not found", 404, "ORDER_NOT_FOUND");
+    if (order.status !== OrderStatus.AWAITING_PAYMENT || order.payment) {
+      throw new AppError("Only an unpaid checkout draft can be discarded", 409, "DRAFT_NOT_DISCARDABLE");
+    }
+
+    await prisma.order.delete({ where: { id: order.id } });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     return jsonError(error);
   }
