@@ -1,3 +1,4 @@
+import { PaymentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { verifyChapaTransaction } from "@/lib/chapa";
@@ -12,13 +13,22 @@ export async function GET(request: NextRequest) {
     if (!txRef || txRef.length > 100) throw new AppError("Invalid payment reference", 400, "INVALID_REFERENCE");
     const payment = await prisma.payment.findFirst({ where: { txRef, userId: user.id } });
     if (!payment) throw new AppError("Payment not found", 404, "PAYMENT_NOT_FOUND");
-    if (payment.status === "SUCCESS") return NextResponse.json({ status: "success" });
+    if (payment.status === PaymentStatus.SUCCESS) return NextResponse.json({ status: "success" });
+    if (payment.status === PaymentStatus.FAILED) return NextResponse.json({ status: "failed" });
+
     const verified = await verifyChapaTransaction(txRef);
     if (verified.status.toLowerCase() === "success") {
       await applySuccessfulChapaPayment(verified);
       return NextResponse.json({ status: "success" });
     }
+
     const failed = ["failed", "cancelled", "canceled", "failed/cancelled"].includes(verified.status.toLowerCase());
+    if (failed) {
+      await prisma.payment.updateMany({
+        where: { id: payment.id, status: PaymentStatus.PENDING },
+        data: { status: PaymentStatus.FAILED, verifiedAt: new Date() },
+      });
+    }
     return NextResponse.json({ status: failed ? "failed" : "pending" });
   } catch (error) {
     return jsonError(error);
