@@ -24,8 +24,12 @@ export function validateTelegramInitData(initData: string): TelegramUser {
   const hash = params.get("hash");
   if (!hash) throw new AppError("Invalid Telegram authentication data", 401, "INVALID_TELEGRAM_AUTH");
 
+  // Bot-token HMAC validation must include every received field except `hash`.
+  // Newer Telegram clients may include a `signature` field. That field is excluded
+  // only for the separate Ed25519 third-party validation flow; excluding it here
+  // produces a false signature mismatch.
   const dataCheckString = [...params.entries()]
-    .filter(([key]) => key !== "hash" && key !== "signature")
+    .filter(([key]) => key !== "hash")
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");

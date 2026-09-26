@@ -1,0 +1,139 @@
+"use strict";
+
+const token = process.env.TELEGRAM_BOT_TOKEN;
+const appUrl = process.env.APP_URL;
+
+if (!token) {
+  console.error("TELEGRAM_BOT_TOKEN is missing");
+  process.exit(1);
+}
+if (!appUrl || !/^https:\/\//i.test(appUrl)) {
+  console.error("APP_URL must be a valid HTTPS URL");
+  process.exit(1);
+}
+
+const apiBase = `https://api.telegram.org/bot${token}`;
+let offset = 0;
+let stopped = false;
+
+async function telegram(method, payload = {}) {
+  const response = await fetch(`${apiBase}/${method}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.ok) {
+    const description = body?.description || `HTTP ${response.status}`;
+    throw new Error(`${method} failed: ${description}`);
+  }
+  return body.result;
+}
+
+function miniAppKeyboard() {
+  return {
+    inline_keyboard: [[
+      {
+        text: "Open Dink Promotion",
+        web_app: { url: appUrl },
+      },
+    ]],
+  };
+}
+
+async function sendWelcome(chatId, firstName) {
+  const name = typeof firstName === "string" && firstName.trim() ? firstName.trim() : "there";
+  await telegram("sendMessage", {
+    chat_id: chatId,
+    text: `Welcome ${name}!\n\nUse Dink Promotion to choose a service, pay in ETB, and track your order directly from Telegram.`,
+    reply_markup: miniAppKeyboard(),
+  });
+}
+
+async function sendHelp(chatId) {
+  await telegram("sendMessage", {
+    chat_id: chatId,
+    text: "Open Dink Promotion from the button below. If you have an order issue, open the Mini App and use Support with your Dink order ID.",
+    reply_markup: miniAppKeyboard(),
+  });
+}
+
+async function handleUpdate(update) {
+  const message = update?.message;
+  if (!message?.chat?.id || message.chat.type !== "private") return;
+
+  const text = typeof message.text === "string" ? message.text.trim() : "";
+  const command = text.split(/\s+/, 1)[0].split("@", 1)[0].toLowerCase();
+
+  if (command === "/start" || command === "/app") {
+    await sendWelcome(message.chat.id, message.from?.first_name);
+    return;
+  }
+
+  if (command === "/help") {
+    await sendHelp(message.chat.id);
+  }
+}
+
+async function configureBot() {
+  // Long polling and webhooks cannot be active at the same time.
+  await telegram("deleteWebhook", { drop_pending_updates: false });
+
+  await telegram("setMyCommands", {
+    commands: [
+      { command: "start", description: "Open Dink Promotion" },
+      { command: "app", description: "Open the Mini App" },
+      { command: "help", description: "Get support information" },
+    ],
+  });
+
+  await telegram("setChatMenuButton", {
+    menu_button: {
+      type: "web_app",
+      text: "Open Dink Promotion",
+      web_app: { url: appUrl },
+    },
+  });
+
+  const me = await telegram("getMe");
+  console.log(`Dink Promotion bot online as @${me.username || me.id}`);
+  console.log(`Mini App URL: ${appUrl}`);
+}
+
+async function poll() {
+  while (!stopped) {
+    try {
+      const updates = await telegram("getUpdates", {
+        offset,
+        timeout: 30,
+        allowed_updates: ["message"],
+      });
+
+      for (const update of updates) {
+        offset = Math.max(offset, Number(update.update_id) + 1);
+        try {
+          await handleUpdate(update);
+        } catch (error) {
+          console.error("Update handling failed:", error instanceof Error ? error.message : error);
+        }
+      }
+    } catch (error) {
+      if (stopped) break;
+      console.error("Telegram polling failed:", error instanceof Error ? error.message : error);
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    }
+  }
+}
+
+process.on("SIGTERM", () => { stopped = true; });
+process.on("SIGINT", () => { stopped = true; });
+
+(async () => {
+  try {
+    await configureBot();
+    await poll();
+  } catch (error) {
+    console.error("Bot startup failed:", error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+})();
