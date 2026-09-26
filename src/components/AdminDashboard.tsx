@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Check, CircleDollarSign, Loader2, PackageSearch, RefreshCw, Search, ShieldCheck, UsersRound } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { AdminBroadcast } from "./AdminBroadcast";
 import { Brand } from "./Brand";
 
 type Service = {
@@ -70,12 +71,14 @@ export function AdminDashboard() {
   const load = useCallback(async (query = "") => {
     try {
       setError(null);
-      const [overviewData, serviceData] = await Promise.all([
-        api<Overview>("/api/admin/overview"),
-        api<{ items: Service[] }>(`/api/admin/services${query ? `?search=${encodeURIComponent(query)}` : ""}`),
-      ]);
+      // Keep these reads sequential. On a small Supabase plan this avoids opening
+      // several database sessions at the same time just to render one dashboard.
+      const overviewData = await api<Overview>("/api/admin/overview");
       setOverview(overviewData);
+
+      const serviceData = await api<{ items: Service[] }>(`/api/admin/services${query ? `?search=${encodeURIComponent(query)}` : ""}`);
       setServices(serviceData.items);
+
       try {
         const provider = await api<{ balance: string; currency: string }>("/api/admin/provider");
         setProviderBalance(provider.balance);
@@ -94,8 +97,8 @@ export function AdminDashboard() {
     setBusy("sync");
     setError(null);
     try {
-      const result = await api<{ received: number }>("/api/admin/services/sync", { method: "POST", body: "{}" });
-      setNotice(`Synced ${result.received.toLocaleString()} PRM4U services. New services remain unpublished until you enable them.`);
+      const result = await api<{ received: number; unpublished: number }>("/api/admin/services/sync", { method: "POST", body: "{}" });
+      setNotice(`Synced ${result.received.toLocaleString()} PRM4U services${result.unpublished ? ` and unpublished ${result.unpublished} removed provider service${result.unpublished === 1 ? "" : "s"}` : ""}. New services stay hidden until you price and publish them.`);
       await load(search);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sync failed");
@@ -155,7 +158,18 @@ export function AdminDashboard() {
   }
 
   if (error && !overview) {
-    return <main className="admin-gate"><Brand /><ShieldCheck size={34} /><h1>Admin access</h1><p>{error}</p><button className="secondary-button" onClick={() => window.location.assign("/")}><ArrowLeft size={16} /> Back to Mini App</button></main>;
+    return (
+      <main className="admin-gate">
+        <Brand />
+        <ShieldCheck size={34} />
+        <h1>Admin access</h1>
+        <p>{error}</p>
+        <div className="admin-gate-actions">
+          <button className="primary-button" onClick={() => void load()}><RefreshCw size={16} /> Retry</button>
+          <button className="secondary-button" onClick={() => window.location.assign("/")}><ArrowLeft size={16} /> Mini App</button>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -164,12 +178,12 @@ export function AdminDashboard() {
         <div className="admin-brand"><Brand /><span>Admin</span></div>
         <div className="admin-header-actions">
           <button className="secondary-button" onClick={() => window.location.assign("/")}><ArrowLeft size={16} /> Mini App</button>
-          <button className="secondary-button" onClick={() => load(search)}><RefreshCw size={16} /> Refresh</button>
+          <button className="secondary-button" onClick={() => void load(search)}><RefreshCw size={16} /> Refresh</button>
         </div>
       </header>
 
       <section className="admin-main">
-        <div className="admin-title"><div><p>OPERATIONS</p><h1>Dink Promotion Control Center</h1><span>PRM4U stays behind the scenes. Dink controls pricing, publishing, customers and fulfillment state.</span></div></div>
+        <div className="admin-title"><div><p>OPERATIONS</p><h1>Dink Promotion Control Center</h1><span>Pricing, services, orders and customer messaging in one place.</span></div></div>
         {error && <div className="admin-alert danger">{error}</div>}
         {notice && <div className="admin-alert success"><Check size={16} /> {notice}</div>}
 
@@ -182,11 +196,19 @@ export function AdminDashboard() {
         </div>
 
         <section className="admin-panel">
-          <div className="admin-panel-head"><div><h2>Provider operations</h2><p>Sync catalog changes and refresh open order statuses.</p></div><div className="admin-actions"><button className="primary-button" onClick={syncServices} disabled={!!busy}>{busy === "sync" ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />} Sync PRM4U services</button><button className="secondary-button" onClick={syncStatuses} disabled={!!busy}>{busy === "status" ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />} Sync order statuses</button></div></div>
+          <div className="admin-panel-head">
+            <div><h2>Provider operations</h2><p>The catalog refreshes automatically in the background when it is older than 10 minutes. You can still force a sync here.</p></div>
+            <div className="admin-actions">
+              <button className="primary-button" onClick={syncServices} disabled={!!busy}>{busy === "sync" ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />} Sync services</button>
+              <button className="secondary-button" onClick={syncStatuses} disabled={!!busy}>{busy === "status" ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />} Sync orders</button>
+            </div>
+          </div>
         </section>
 
+        <AdminBroadcast />
+
         <section className="admin-panel">
-          <div className="admin-panel-head"><div><h2>Services</h2><p>Nothing is published automatically. Set a Dink price and enable only services you want customers to see.</p></div></div>
+          <div className="admin-panel-head"><div><h2>Services</h2><p>New PRM4U services are imported automatically but stay unpublished. Set the Dink price and publish only what you want customers to see.</p></div></div>
           <form className="admin-search" onSubmit={submitSearch}><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search provider name, platform or category" /><button className="secondary-button" disabled={busy === "search"}>Search</button></form>
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -200,7 +222,7 @@ export function AdminDashboard() {
         </section>
 
         <section className="admin-panel">
-          <div className="admin-panel-head"><div><h2>Latest orders</h2><p>Provider review is intentionally separate from retryable provider errors to avoid duplicate orders.</p></div></div>
+          <div className="admin-panel-head"><div><h2>Latest orders</h2><p>Retry only provider errors. Orders marked for review stay manual so they are not submitted twice.</p></div></div>
           <div className="admin-table-wrap">
             <table className="admin-table compact-table">
               <thead><tr><th>Order</th><th>Service</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
