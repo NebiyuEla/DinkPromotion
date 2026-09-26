@@ -1,3 +1,4 @@
+import { OrderStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -6,6 +7,8 @@ import { calculateOrderAmountMinor } from "@/lib/pricing";
 import { createOrderSchema } from "@/lib/validators";
 import { newPublicOrderId, syncOpenProviderOrders } from "@/lib/orders";
 import { serializeOrder } from "@/lib/serializers";
+
+const ABANDONED_DRAFT_AGE_MS = 30 * 60 * 1000;
 
 export async function GET() {
   try {
@@ -16,8 +19,26 @@ export async function GET() {
       // A provider outage must not hide the customer's existing order history.
       console.error("Customer provider status refresh failed", error);
     }
+
+    // Orders are only real purchases once a payment flow exists. Remove old
+    // checkout drafts that were abandoned before payment was started.
+    await prisma.order.deleteMany({
+      where: {
+        userId: user.id,
+        status: OrderStatus.AWAITING_PAYMENT,
+        payment: { is: null },
+        createdAt: { lt: new Date(Date.now() - ABANDONED_DRAFT_AGE_MS) },
+      },
+    });
+
     const orders = await prisma.order.findMany({
-      where: { userId: user.id },
+      where: {
+        userId: user.id,
+        OR: [
+          { status: { not: OrderStatus.AWAITING_PAYMENT } },
+          { payment: { isNot: null } },
+        ],
+      },
       include: { service: true, payment: true },
       orderBy: { createdAt: "desc" },
       take: 100,
