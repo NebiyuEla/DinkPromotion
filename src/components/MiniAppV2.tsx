@@ -248,8 +248,6 @@ export function MiniAppV2() {
   useEffect(() => {
     let active = true;
 
-    // Catalog and Telegram authentication start together. A cached catalog can
-    // paint immediately while the fresh copy is fetched in the background.
     void loadServices().catch((error) => {
       if (active) showMessage(error instanceof Error ? error.message : "Unable to load services", "error");
     });
@@ -457,7 +455,7 @@ export function MiniAppV2() {
     setBusy(true);
     try {
       await loadPrivate();
-      if (selectedOrder?.payment || selectedOrder?.status !== "AWAITING_PAYMENT") {
+      if (selectedOrder && (selectedOrder.payment || selectedOrder.status !== "AWAITING_PAYMENT")) {
         const data = await api<{ order: Order }>(`/api/orders/${selectedOrder.id}`);
         setSelectedOrder(data.order);
       }
