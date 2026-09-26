@@ -1,5 +1,6 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { discountedServicePrice, getDiscountMap } from "@/lib/discounts";
 import { serializeService } from "@/lib/serializers";
 import { isPrmCatalogStale, syncPrmServices } from "@/lib/service-sync";
 
@@ -17,25 +18,39 @@ export async function GET(request: NextRequest) {
   // silently missing simply because it sorts after the first 300 rows.
   const take = platform || category || search || featured ? requestedTake : 1200;
 
-  const services = await prisma.service.findMany({
-    where: {
-      active: true,
-      compatible: true,
-      ...(platform && platform !== "All" ? { platform } : {}),
-      ...(category && category !== "All" ? { category } : {}),
-      ...(featured ? { featured: true } : {}),
-      ...(search
-        ? {
-            OR: [
-              { displayName: { contains: search, mode: "insensitive" } },
-              { platform: { contains: search, mode: "insensitive" } },
-              { category: { contains: search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: [{ featured: "desc" }, { sortOrder: "asc" }, { pricePerThousandMinor: "asc" }],
-    take,
+  const [services, discounts] = await Promise.all([
+    prisma.service.findMany({
+      where: {
+        active: true,
+        compatible: true,
+        ...(platform && platform !== "All" ? { platform } : {}),
+        ...(category && category !== "All" ? { category } : {}),
+        ...(featured ? { featured: true } : {}),
+        ...(search
+          ? {
+              OR: [
+                { displayName: { contains: search, mode: "insensitive" } },
+                { platform: { contains: search, mode: "insensitive" } },
+                { category: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ featured: "desc" }, { sortOrder: "asc" }, { pricePerThousandMinor: "asc" }],
+      take,
+    }),
+    getDiscountMap(),
+  ]);
+
+  const customerServices = services.map((service) => {
+    const serialized = serializeService(service);
+    const discounted = discountedServicePrice(service.pricePerThousandMinor, service.platform, discounts);
+    return {
+      ...serialized,
+      pricePerThousandMinor: discounted.priceMinor,
+      originalPricePerThousandMinor: service.pricePerThousandMinor,
+      discountPercent: discounted.percent,
+    };
   });
 
   // Keep the customer request fast. When the cached provider catalog is older than
@@ -49,5 +64,5 @@ export async function GET(request: NextRequest) {
     }
   });
 
-  return NextResponse.json({ services: services.map(serializeService) });
+  return NextResponse.json({ services: customerServices });
 }
