@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentKind, PaymentStatus } from "@prisma/client";
+import { OrderStatus, PaymentKind, PaymentStatus, type Order, type Payment } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { localMobile, requireBotRequest, syncBotUser } from "@/lib/bot-api";
@@ -20,11 +20,16 @@ const orderWhere = (userId: string) => ({
   userId,
   OR: [
     { status: { not: OrderStatus.AWAITING_PAYMENT } },
-    // Any real payment attempt belongs in history, including a failed attempt
-    // that the user may safely retry.
     { payment: { isNot: null } },
   ],
 });
+
+function botOrderStatus(order: Pick<Order, "status"> & { payment?: Pick<Payment, "status"> | null }) {
+  if (order.status === OrderStatus.AWAITING_PAYMENT && order.payment?.status === PaymentStatus.FAILED) {
+    return OrderStatus.FAILED;
+  }
+  return order.status;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,8 +66,11 @@ export async function POST(request: NextRequest) {
         prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
         prisma.order.count({
           where: {
-            ...orderWhere(user.id),
-            status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED] },
+            userId: user.id,
+            OR: [
+              { status: { in: [OrderStatus.PAID, OrderStatus.QUEUED, OrderStatus.PENDING, OrderStatus.PROCESSING, OrderStatus.IN_PROGRESS, OrderStatus.PARTIAL, OrderStatus.PROVIDER_ERROR, OrderStatus.PROVIDER_REVIEW] } },
+              { status: OrderStatus.AWAITING_PAYMENT, payment: { is: { status: PaymentStatus.PENDING } } },
+            ],
           },
         }),
       ]);
@@ -110,7 +118,8 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: 5,
       });
-      const activeOrders = orders.filter((order) => ![OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED].includes(order.status)).length;
+      const statuses = orders.map(botOrderStatus);
+      const activeOrders = statuses.filter((status) => ![OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED].includes(status)).length;
       return NextResponse.json({
         ...base,
         activeOrders,
@@ -120,7 +129,7 @@ export async function POST(request: NextRequest) {
           platform: order.service.platform,
           quantity: order.quantity,
           amountMinor: order.amountMinor,
-          status: order.status,
+          status: botOrderStatus(order),
           paymentStatus: order.payment?.status || null,
           createdAt: order.createdAt.toISOString(),
         })),
@@ -154,7 +163,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    const activeOrders = orders.filter((order) => ![OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED].includes(order.status)).length;
+    const activeOrders = orders.map(botOrderStatus).filter((status) => ![OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED].includes(status)).length;
 
     return NextResponse.json({
       ...base,
@@ -166,7 +175,7 @@ export async function POST(request: NextRequest) {
         platform: order.service.platform,
         quantity: order.quantity,
         amountMinor: order.amountMinor,
-        status: order.status,
+        status: botOrderStatus(order),
         paymentStatus: order.payment?.status || null,
         createdAt: order.createdAt.toISOString(),
       })),
