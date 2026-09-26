@@ -215,7 +215,8 @@ const BLOCKED_SERVICE_TERMS = [
   /moneti[sz]ation/i,
   /watch\s*(?:time|hours?)/i,
   /blue\s*(?:tick|badge)/i,
-  /verif(?:y|ied|ication)\s*(?:badge|account|profile|tick)?/i,
+  /\bverif(?:y|ied|ication)\s*(?:badge|account|profile|tick)\b/i,
+  /\b(?:badge|account|profile|tick)\s*verif(?:y|ied|ication)\b/i,
   /(?:password|login)\s*(?:required|needed)?/i,
   /custom\s*comments?/i,
   /comment\s*list/i,
@@ -289,10 +290,21 @@ const CATEGORY_ORDER = [
 ];
 const TIER_ORDER: CatalogTier[] = ["Cheap", "Standard", "Fast", "Stable", "Refill"];
 
+function preferredMinimum(category: string) {
+  if (["Followers", "Members", "Subscribers"].includes(category)) return 100;
+  if (["Comments", "Poll Votes", "Retweets"].includes(category)) return 10;
+  if (["Likes", "Reactions", "Shares", "Saves"].includes(category)) return 50;
+  return 100;
+}
+
 function bestCandidate(candidates: CatalogCandidate[], tier: CatalogTier) {
   return candidates
     .filter((candidate) => candidate.tier === tier)
-    .sort((a, b) => a.rate - b.rate || a.min - b.min || a.providerServiceId - b.providerServiceId)[0];
+    .sort((a, b) => {
+      const aAccessible = a.min <= preferredMinimum(a.category) ? 0 : 1;
+      const bAccessible = b.min <= preferredMinimum(b.category) ? 0 : 1;
+      return aAccessible - bAccessible || a.rate - b.rate || a.min - b.min || a.providerServiceId - b.providerServiceId;
+    })[0];
 }
 
 function customerTierLabel(candidate: CatalogCandidate) {
