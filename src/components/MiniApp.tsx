@@ -129,15 +129,6 @@ function statusTone(status: string) {
   return "warning";
 }
 
-function progressFor(status: string) {
-  if (status === "COMPLETED") return 100;
-  if (["IN_PROGRESS", "PARTIAL"].includes(status)) return 72;
-  if (["PROCESSING", "PENDING"].includes(status)) return 46;
-  if (["PAID", "QUEUED"].includes(status)) return 28;
-  if (status === "AWAITING_PAYMENT") return 10;
-  return 10;
-}
-
 function haptic(type: "success" | "error" | "warning") {
   window.Telegram?.WebApp.HapticFeedback?.notificationOccurred?.(type);
 }
@@ -147,6 +138,7 @@ export function MiniApp() {
   const [previousView, setPreviousView] = useState<View>("home");
   const [user, setUser] = useState<User | null>(null);
   const [services, setServices] = useState<Service[]>([]);
+  const [servicesState, setServicesState] = useState<"loading" | "ready" | "error">("loading");
   const [orders, setOrders] = useState<Order[]>([]);
   const [balanceMinor, setBalanceMinor] = useState(0);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
@@ -169,8 +161,15 @@ export function MiniApp() {
   }, []);
 
   const loadServices = useCallback(async () => {
-    const data = await api<{ services: Service[] }>("/api/services?take=100");
-    setServices(data.services);
+    setServicesState("loading");
+    try {
+      const data = await api<{ services: Service[] }>("/api/services?take=100");
+      setServices(data.services);
+      setServicesState("ready");
+    } catch (error) {
+      setServicesState("error");
+      throw error;
+    }
   }, []);
 
   const loadPrivate = useCallback(async () => {
@@ -234,6 +233,13 @@ export function MiniApp() {
       active = false;
     };
   }, [loadPrivate, loadServices, showMessage]);
+
+  useEffect(() => {
+    if (!user) return;
+    const onFocus = () => { void loadPrivate().catch(() => showMessage("Could not update your account. Pull to retry.", "error")); };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user, loadPrivate, showMessage]);
 
   const categories = useMemo(() => ["All", ...Array.from(new Set(services.map((item) => item.category))).sort()], [services]);
   const visibleServices = useMemo(() => {
@@ -422,13 +428,17 @@ export function MiniApp() {
             authState={authState}
             featured={featured}
             services={services}
+            servicesState={servicesState}
+            retryServices={() => { void loadServices().catch(() => showMessage("Could not load services.", "error")); }}
             openService={openService}
-            openServices={() => go("services", "home")}
+            openServices={(selectedPlatform?: string) => { setPlatform(selectedPlatform || "All"); go("services", "home"); }}
           />
         )}
         {view === "services" && (
           <ServicesView
             services={visibleServices}
+            servicesState={servicesState}
+            retryServices={() => { void loadServices().catch(() => showMessage("Could not load services.", "error")); }}
             platform={platform}
             setPlatform={setPlatform}
             category={category}
@@ -460,7 +470,7 @@ export function MiniApp() {
             busy={busy}
           />
         )}
-        {view === "orders" && <OrdersView orders={orders} openOrder={openOrder} refresh={refreshAccount} busy={busy} authenticated={!!user} />}
+        {view === "orders" && <OrdersView orders={orders} openOrder={openOrder} refresh={refreshAccount} busy={busy} authenticated={!!user} authState={authState} />}
         {view === "order" && selectedOrder && (
           <OrderDetail
             order={selectedOrder}
@@ -469,6 +479,7 @@ export function MiniApp() {
             refill={requestRefill}
             cancel={cancelOrder}
             busy={busy}
+            pay={() => setView("checkout")}
           />
         )}
         {view === "wallet" && (
@@ -480,6 +491,7 @@ export function MiniApp() {
             topUp={topUpWallet}
             authenticated={!!user}
             busy={busy}
+            authState={authState}
           />
         )}
         {view === "profile" && (
@@ -555,6 +567,8 @@ function HomeView({
   authState,
   featured,
   services,
+  servicesState,
+  retryServices,
   openService,
   openServices,
 }: {
@@ -562,20 +576,21 @@ function HomeView({
   authState: string;
   featured: Service[];
   services: Service[];
+  servicesState: "loading" | "ready" | "error";
+  retryServices: () => void;
   openService: (service: Service) => void;
-  openServices: () => void;
+  openServices: (platform?: string) => void;
 }) {
   const platforms = platformOrder.slice(1).filter((name) => services.some((service) => service.platform === name));
   return (
     <>
       <AppTop title="Dink Promotion" subtitle={user ? `Welcome, ${user.firstName}` : "Telegram Mini App"} />
       <section className="hero-card">
-        <div className="hero-logo-wrap"><Brand /></div>
-        <p className="eyebrow">SOCIAL MEDIA PROMOTION</p>
-        <h1>Grow your audience from one simple place.</h1>
-        <p className="hero-copy">Choose a service, enter your link, pay in ETB and track the order from Telegram.</p>
+        <p className="eyebrow">DINK PROMOTION</p>
+        <h1>Promote your content with confidence.</h1>
+        <p className="hero-copy">Explore available services, order in ETB and follow every update in one place.</p>
         <div className="hero-actions">
-          <button type="button" className="primary-button" onClick={openServices}>Browse services</button>
+          <button type="button" className="primary-button" onClick={() => openServices()}>Browse services</button>
           {authState === "telegram-required" && <span className="hero-note"><LogIn size={15} /> Open in Telegram to order</span>}
         </div>
       </section>
@@ -585,15 +600,13 @@ function HomeView({
         {platforms.length ? (
           <div className="platform-grid">
             {platforms.slice(0, 6).map((name) => (
-              <button type="button" className="platform-card" key={name} onClick={openServices}>
+              <button type="button" className="platform-card" key={name} onClick={() => openServices(name)}>
                 <span className={`platform-icon ${platformClass(name)}`}><PlatformIcon platform={name} /></span>
                 <strong>{name.replace(" / Twitter", "")}</strong>
               </button>
             ))}
           </div>
-        ) : (
-          <EmptyState title="No services published yet" text="An admin can sync PRM4U services, set Dink pricing, then publish selected services." />
-        )}
+        ) : servicesState === "loading" ? <LoadingState /> : servicesState === "error" ? <ErrorState retry={retryServices} /> : <EmptyState title="Services coming soon" text="There are no services available to order right now. Check back soon." />}
       </section>
 
       <section className="section-block">
@@ -603,16 +616,15 @@ function HomeView({
         </div>
       </section>
 
-      <section className="trust-strip">
-        <div><ShieldCheck size={19} /><span><strong>Verified payment flow</strong><small>Chapa is verified server-side before fulfillment.</small></span></div>
-        <div><RefreshCw size={19} /><span><strong>Live order status</strong><small>Provider status sync keeps orders current.</small></span></div>
-      </section>
+      <section className="trust-strip"><div><ShieldCheck size={19} /><span><strong>Payment verification</strong><small>Orders begin after payment is confirmed.</small></span></div><div><RefreshCw size={19} /><span><strong>Order updates</strong><small>Track the latest available order status.</small></span></div></section>
     </>
   );
 }
 
-function ServicesView({ services, platform, setPlatform, category, setCategory, categories, search, setSearch, openService }: {
+function ServicesView({ services, servicesState, retryServices, platform, setPlatform, category, setCategory, categories, search, setSearch, openService }: {
   services: Service[];
+  servicesState: "loading" | "ready" | "error";
+  retryServices: () => void;
   platform: string;
   setPlatform: (value: string) => void;
   category: string;
@@ -638,7 +650,7 @@ function ServicesView({ services, platform, setPlatform, category, setCategory, 
       <div className="service-stack">
         {services.map((service) => <ServiceRow key={service.id} service={service} onClick={() => openService(service)} />)}
       </div>
-      {!services.length && <EmptyState title="No matching services" text="Try another platform, service type or search." />}
+      {servicesState === "loading" ? <LoadingState /> : servicesState === "error" ? <ErrorState retry={retryServices} /> : !services.length && <EmptyState title="No matching services" text="Try another platform, service type or search. If all filters are clear, there are no services available yet." />}
     </>
   );
 }
@@ -718,12 +730,12 @@ function CheckoutView({ order, balanceMinor, onPay, back, busy }: { order: Order
   );
 }
 
-function OrdersView({ orders, openOrder, refresh, busy, authenticated }: { orders: Order[]; openOrder: (order: Order) => void; refresh: () => void; busy: boolean; authenticated: boolean }) {
+function OrdersView({ orders, openOrder, refresh, busy, authenticated, authState }: { orders: Order[]; openOrder: (order: Order) => void; refresh: () => void; busy: boolean; authenticated: boolean; authState: string }) {
   return (
     <>
       <AppTop title="My orders" subtitle="Track every purchase" />
       <div className="page-actions"><button type="button" className="secondary-button" onClick={refresh} disabled={busy || !authenticated}><RefreshCw size={16} className={busy ? "spin" : ""} /> Refresh</button></div>
-      {!authenticated ? <TelegramRequired compact /> : orders.length ? (
+      {!authenticated ? <TelegramRequired compact state={authState} /> : orders.length ? (
         <div className="order-list">
           {orders.map((order) => (
             <button type="button" className="order-row" key={order.id} onClick={() => openOrder(order)}>
@@ -738,7 +750,7 @@ function OrdersView({ orders, openOrder, refresh, busy, authenticated }: { order
   );
 }
 
-function OrderDetail({ order, back, refresh, refill, cancel, busy }: { order: Order; back: () => void; refresh: () => void; refill: () => void; cancel: () => void; busy: boolean }) {
+function OrderDetail({ order, back, refresh, refill, cancel, pay, busy }: { order: Order; back: () => void; refresh: () => void; refill: () => void; cancel: () => void; pay: () => void; busy: boolean }) {
   const canRefill = !!order.service?.refill && ["COMPLETED", "PARTIAL"].includes(order.status);
   const canCancel = !!order.service?.cancel && order.status === "PENDING";
   return (
@@ -753,8 +765,7 @@ function OrderDetail({ order, back, refresh, refill, cancel, busy }: { order: Or
         <div className="metric-grid"><div><span>Quantity</span><strong>{order.quantity.toLocaleString()}</strong></div><div><span>Total</span><strong>{money(order.amountMinor)}</strong></div></div>
       </section>
       <section className="progress-card">
-        <div className="progress-title"><strong>Order progress</strong><span>{progressFor(order.status)}%</span></div>
-        <div className="progress-track"><i style={{ width: `${progressFor(order.status)}%` }} /></div>
+        <div className="progress-title"><strong>Latest status</strong><span>{statusLabel(order.status)}</span></div>
         <div className="progress-meta"><span>Start count: {order.startCount || "—"}</span><span>Remaining: {order.remains || "—"}</span></div>
       </section>
       {order.status === "PROVIDER_REVIEW" && <div className="notice danger"><CircleHelp size={18} /><span><strong>Manual review required</strong>Provider response was ambiguous, so Dink did not retry automatically to prevent duplicate fulfillment.</span></div>}
@@ -762,6 +773,7 @@ function OrderDetail({ order, back, refresh, refill, cancel, busy }: { order: Or
       {order.status === "COMPLETED" && <div className="notice success"><Check size={18} /><span><strong>Completed</strong>The provider reports this order as completed.</span></div>}
       {order.status === "AWAITING_PAYMENT" && <div className="notice warning"><Clock3 size={18} /><span><strong>Awaiting payment</strong>Return to checkout to finish payment.</span></div>}
       <div className="action-stack">
+        {order.status === "AWAITING_PAYMENT" && <button type="button" className="primary-button full" onClick={pay}>Continue to payment</button>}
         <button type="button" className="secondary-button full" onClick={refresh} disabled={busy}><RefreshCw size={17} className={busy ? "spin" : ""} /> Refresh status</button>
         {canRefill && <button type="button" className="secondary-button full" onClick={refill} disabled={busy}><RefreshCw size={17} /> Request refill</button>}
         {canCancel && <button type="button" className="danger-button full" onClick={cancel} disabled={busy}>Cancel pending order</button>}
@@ -770,11 +782,11 @@ function OrderDetail({ order, back, refresh, refill, cancel, busy }: { order: Or
   );
 }
 
-function WalletView({ balanceMinor, transactions, amount, setAmount, topUp, authenticated, busy }: { balanceMinor: number; transactions: WalletTransaction[]; amount: string; setAmount: (value: string) => void; topUp: (event: FormEvent) => void; authenticated: boolean; busy: boolean }) {
+function WalletView({ balanceMinor, transactions, amount, setAmount, topUp, authenticated, busy, authState }: { balanceMinor: number; transactions: WalletTransaction[]; amount: string; setAmount: (value: string) => void; topUp: (event: FormEvent) => void; authenticated: boolean; busy: boolean; authState: string }) {
   return (
     <>
       <AppTop title="Wallet" subtitle="Pay faster with Dink balance" />
-      {!authenticated ? <TelegramRequired compact /> : (
+      {!authenticated ? <TelegramRequired compact state={authState} /> : (
         <>
           <section className="wallet-card"><span>Available balance</span><strong>{money(balanceMinor)}</strong><small>Refunds for eligible cancelled orders are returned here.</small></section>
           <form className="topup-form" onSubmit={topUp}>
@@ -826,7 +838,7 @@ function SupportView({ back, openExternal }: { back: () => void; openExternal: (
         <div className="support-card"><CircleHelp size={24} /><h2>Order issue?</h2><p>Have your Dink order ID ready so support can locate the exact transaction.</p></div>
         <div className="support-card"><ShieldCheck size={24} /><h2>Payment issue?</h2><p>Payments are verified against Chapa before an order is fulfilled.</p></div>
       </div>
-      {supportUrl ? <button type="button" className="primary-button full" onClick={() => openExternal(supportUrl)}><LifeBuoy size={18} /> Contact Dink Support <ExternalLink size={15} /></button> : <div className="notice warning"><CircleHelp size={18} /><span><strong>Support link not configured</strong>Set NEXT_PUBLIC_SUPPORT_URL in production to enable direct support.</span></div>}
+      {supportUrl ? <button type="button" className="primary-button full" onClick={() => openExternal(supportUrl)}><LifeBuoy size={18} /> Contact Dink Support <ExternalLink size={15} /></button> : <div className="notice warning"><CircleHelp size={18} /><span><strong>Contact unavailable</strong>Support contact is temporarily unavailable. Keep your order ID and try again later.</span></div>}
     </>
   );
 }
@@ -849,8 +861,8 @@ function TelegramRequired({ compact = false, state }: { compact?: boolean; state
   return (
     <div className={`telegram-required ${compact ? "compact" : ""}`}>
       <LogIn size={26} />
-      <h2>{state === "error" ? "Telegram sign-in failed" : "Open in Telegram"}</h2>
-      <p>{state === "error" ? "The Mini App could not verify your Telegram session. Close it and reopen it from the bot." : "Browsing is available here, but ordering, wallet and account features require a verified Telegram Mini App session."}</p>
+      <h2>{state === "loading" ? "Connecting to Telegram" : state === "error" ? "Telegram sign-in failed" : "Open in Telegram"}</h2>
+      <p>{state === "loading" ? "Verifying your session…" : state === "error" ? "The Mini App could not verify your Telegram session. Close it and reopen it from the bot." : "Browsing is available here, but ordering, wallet and account features require a verified Telegram Mini App session."}</p>
     </div>
   );
 }
@@ -858,3 +870,6 @@ function TelegramRequired({ compact = false, state }: { compact?: boolean; state
 function EmptyState({ title, text }: { title: string; text: string }) {
   return <div className="empty-state"><PackageCheck size={26} /><strong>{title}</strong><p>{text}</p></div>;
 }
+
+function LoadingState() { return <div className="empty-state" role="status"><Loader2 className="spin" size={24} /><strong>Loading services</strong><p>Checking the current catalog…</p></div>; }
+function ErrorState({ retry }: { retry: () => void }) { return <div className="empty-state" role="alert"><WifiOff size={24} /><strong>Services unavailable</strong><p>We could not load the catalog. Check your connection and try again.</p><button type="button" className="secondary-button" onClick={retry}>Try again</button></div>; }
