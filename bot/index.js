@@ -1,372 +1,80 @@
 "use strict";
 
+const crypto = require("node:crypto");
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const appUrl = process.env.APP_URL;
+const appUrl = String(process.env.APP_URL || "").replace(/\/$/, "");
+if (!token) throw new Error("TELEGRAM_BOT_TOKEN is missing");
+if (!/^https:\/\//i.test(appUrl)) throw new Error("APP_URL must be a valid HTTPS URL");
 
-if (!token) {
-  console.error("TELEGRAM_BOT_TOKEN is missing");
-  process.exit(1);
-}
-if (!appUrl || !/^https:\/\//i.test(appUrl)) {
-  console.error("APP_URL must be a valid HTTPS URL");
-  process.exit(1);
-}
-
-const apiBase = `https://api.telegram.org/bot${token}`;
-const userLanguages = new Map();
+const tgBase = `https://api.telegram.org/bot${token}`;
+const langs = new Map();
+const flows = new Map();
 let offset = 0;
 let stopped = false;
 
-const copy = {
+const T = {
   en: {
-    open: "🚀 Open Dink Promotion",
-    topup: "💰 Top Up",
-    orders: "📦 Orders",
-    wallet: "👛 Wallet",
-    support: "🛟 Support",
-    choose: "Choose an option…",
-    languageButton: "🇪🇹 አማርኛ",
-    welcome: (name) => `👋 Hi${name}!\n\n✨ <b>Dink Promotion</b>\nPromote, top up, and track orders in one place.`,
-    servicesText: "🚀 <b>Services</b>\nBrowse promotion services with ETB pricing.",
-    servicesButton: "🚀 Browse services",
-    ordersText: "📦 <b>My orders</b>\nTrack paid orders and their latest status.",
-    ordersButton: "📦 View orders",
-    topupText: "💰 <b>Top up</b>\nAdd funds to your Dink balance with Telebirr or CBE Birr.",
-    topupButton: "💳 Add funds",
-    walletText: "👛 <b>Wallet</b>\nView your balance, top-ups, refunds, and transactions.",
-    walletButton: "👛 Open wallet",
-    offersText: "🔥 <b>Offers</b>\nCurrent discounts are applied automatically to live service prices.",
-    offersButton: "🔥 View offers",
-    supportText: "🛟 <b>Support</b>\nGet help with an order, payment, or account.",
-    supportButton: "🛟 Get support",
-    help: "❓ <b>Help</b>\n\n🚀 /services — Browse services\n🔥 /offers — View current offers\n📦 /orders — Track orders\n💰 /topup — Add funds\n👛 /wallet — View wallet\n🛟 /support — Get help\n🌐 /language — Change language",
-    fallback: "✨ <b>Dink Promotion</b>\nChoose what you need below.",
-    languageChanged: "✅ Language changed to English.",
-    languagePrompt: "🌐 <b>Language</b>\nChoose your preferred language."
+    open: "🚀 Open Dink Promotion", topup: "💰 Top Up", orders: "📦 Orders", wallet: "👛 Wallet", offers: "🔥 Offers", support: "🛟 Support", lang: "🇪🇹 አማርኛ",
+    welcome: (n,b,a)=>`👋 Hi${n}!\n\n✨ <b>Dink Promotion</b>\n👛 Balance: <b>${b}</b>\n📦 Active orders: <b>${a}</b>`,
+    walletTitle:"👛 <b>Wallet</b>", balance:"Balance", recent:"Recent activity", noActivity:"No wallet activity yet.",
+    ordersTitle:"📦 <b>My orders</b>", noOrders:"No paid orders yet.", offersTitle:"🔥 <b>Offers</b>", noOffers:"No active discount right now.",
+    topupTitle:"💰 <b>Top up wallet</b>", chooseAmount:"Choose an amount or send a custom ETB amount.", custom:"✍️ Send the amount in ETB.", method:"Choose your payment method.", mobile:"📱 Send the mobile number registered with your payment app.",
+    saved:(m)=>`Use your saved number <b>${m}</b>?`, sent:(a,m)=>`✅ Payment request sent\n\n💰 Amount: <b>${a}</b>\n📲 Method: <b>${m}</b>\n\nApprove it on your phone, then tap Check payment.`,
+    paid:(a,b)=>`✅ <b>Top up complete</b>\n\n+${a}\n👛 Balance: <b>${b}</b>`, pending:"⏳ Payment is still pending. Approve it on your phone and check again.", failed:"❌ Payment was not completed.",
+    badAmount:"Send an amount from 10 to 50,000 ETB.", badMobile:"Send a valid Ethiopian mobile number, for example 0912345678.", error:"I couldn't load your Dink account right now. Please try again.", topupError:"I couldn't start the top up. Please try again.",
+    services:"🚀 <b>Services</b>\nChoose from the live Dink Promotion catalog.", supportText:"🛟 <b>Support</b>\nUse the support button below for order or payment help.", supportOff:"🛟 <b>Support</b>\nSupport contact is not configured yet.",
+    help:"❓ <b>Help</b>\n\n🚀 /services — Browse services\n🔥 /offers — Current discounts\n📦 /orders — Latest orders\n💰 /topup — Top up in this bot\n👛 /wallet — Balance and activity\n🛟 /support — Support\n🌐 /language — Language",
+    language:"🌐 <b>Language</b>\nChoose your preferred language.", changed:"✅ Language changed to English.", refresh:"Updated"
   },
   am: {
-    open: "🚀 Dink Promotion ይክፈቱ",
-    topup: "💰 ዋሌት ሙላ",
-    orders: "📦 ትዕዛዞች",
-    wallet: "👛 ዋሌት",
-    support: "🛟 ድጋፍ",
-    choose: "አማራጭ ይምረጡ…",
-    languageButton: "🇬🇧 English",
-    welcome: (name) => `👋 ሰላም${name}!\n\n✨ <b>Dink Promotion</b>\nየፕሮሞሽን አገልግሎቶችን ይምረጡ፣ ዋሌትዎን ይሙሉ እና ትዕዛዞችዎን በአንድ ቦታ ይከታተሉ።`,
-    servicesText: "🚀 <b>አገልግሎቶች</b>\nየፕሮሞሽን አገልግሎቶችን በብር ዋጋ ይመልከቱ።",
-    servicesButton: "🚀 አገልግሎቶችን ይመልከቱ",
-    ordersText: "📦 <b>ትዕዛዞቼ</b>\nየተከፈሉ ትዕዛዞችዎን እና የቅርብ ጊዜ ሁኔታቸውን ይከታተሉ።",
-    ordersButton: "📦 ትዕዛዞቼን ይመልከቱ",
-    topupText: "💰 <b>ዋሌት ሙላ</b>\nበTelebirr ወይም CBE Birr ወደ Dink ዋሌትዎ ገንዘብ ይጨምሩ።",
-    topupButton: "💳 ገንዘብ ጨምር",
-    walletText: "👛 <b>ዋሌት</b>\nቀሪ ሂሳብዎን፣ የዋሌት ሙላዎችን፣ ተመላሾችን እና ግብይቶችን ይመልከቱ።",
-    walletButton: "👛 ዋሌት ይክፈቱ",
-    offersText: "🔥 <b>ቅናሾች</b>\nአሁን ያሉ ቅናሾች በቀጥታ በአገልግሎት ዋጋዎች ላይ ይተገበራሉ።",
-    offersButton: "🔥 ቅናሾችን ይመልከቱ",
-    supportText: "🛟 <b>ድጋፍ</b>\nለትዕዛዝ፣ ክፍያ ወይም መለያ እገዛ ያግኙ።",
-    supportButton: "🛟 ድጋፍ ያግኙ",
-    help: "❓ <b>እገዛ</b>\n\n🚀 /services — አገልግሎቶችን ይመልከቱ\n🔥 /offers — ቅናሾችን ይመልከቱ\n📦 /orders — ትዕዛዞችን ይከታተሉ\n💰 /topup — ዋሌት ይሙሉ\n👛 /wallet — ዋሌት ይመልከቱ\n🛟 /support — ድጋፍ ያግኙ\n🌐 /language — ቋንቋ ይቀይሩ",
-    fallback: "✨ <b>Dink Promotion</b>\nከታች የሚፈልጉትን ይምረጡ።",
-    languageChanged: "✅ ቋንቋው ወደ አማርኛ ተቀይሯል።",
-    languagePrompt: "🌐 <b>ቋንቋ</b>\nየሚፈልጉትን ቋንቋ ይምረጡ።"
+    open:"🚀 Dink Promotion ይክፈቱ", topup:"💰 ዋሌት ሙላ", orders:"📦 ትዕዛዞች", wallet:"👛 ዋሌት", offers:"🔥 ቅናሾች", support:"🛟 ድጋፍ", lang:"🇬🇧 English",
+    welcome:(n,b,a)=>`👋 ሰላም${n}!\n\n✨ <b>Dink Promotion</b>\n👛 ቀሪ ሂሳብ: <b>${b}</b>\n📦 በሂደት ላይ ያሉ ትዕዛዞች: <b>${a}</b>`,
+    walletTitle:"👛 <b>ዋሌት</b>", balance:"ቀሪ ሂሳብ", recent:"የቅርብ ጊዜ እንቅስቃሴ", noActivity:"እስካሁን የዋሌት እንቅስቃሴ የለም።",
+    ordersTitle:"📦 <b>ትዕዛዞቼ</b>", noOrders:"እስካሁን የተከፈለ ትዕዛዝ የለም።", offersTitle:"🔥 <b>ቅናሾች</b>", noOffers:"አሁን የሚሰራ ቅናሽ የለም።",
+    topupTitle:"💰 <b>ዋሌት ሙላ</b>", chooseAmount:"መጠን ይምረጡ ወይም የሚፈልጉትን የብር መጠን ይላኩ።", custom:"✍️ የሚፈልጉትን መጠን በብር ይላኩ።", method:"የክፍያ መንገድ ይምረጡ።", mobile:"📱 በክፍያ መተግበሪያዎ የተመዘገበውን ስልክ ቁጥር ይላኩ።",
+    saved:(m)=>`የተቀመጠውን <b>${m}</b> ቁጥር ይጠቀሙ?`, sent:(a,m)=>`✅ የክፍያ ጥያቄ ተልኳል\n\n💰 መጠን: <b>${a}</b>\n📲 ዘዴ: <b>${m}</b>\n\nበስልክዎ ያረጋግጡ፣ ከዚያ ክፍያን ያረጋግጡ ይጫኑ።`,
+    paid:(a,b)=>`✅ <b>ዋሌት ተሞልቷል</b>\n\n+${a}\n👛 ቀሪ ሂሳብ: <b>${b}</b>`, pending:"⏳ ክፍያው ገና በመጠባበቅ ላይ ነው። በስልክዎ ያረጋግጡ እና እንደገና ይፈትሹ።", failed:"❌ ክፍያው አልተጠናቀቀም።",
+    badAmount:"ከ10 እስከ 50,000 ብር ያለ መጠን ይላኩ።", badMobile:"ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ይላኩ፣ ለምሳሌ 0912345678።", error:"የDink መለያዎን አሁን መጫን አልቻልኩም። እንደገና ይሞክሩ።", topupError:"ዋሌት ሙላን መጀመር አልቻልኩም። እንደገና ይሞክሩ።",
+    services:"🚀 <b>አገልግሎቶች</b>\nከDink Promotion የቀጥታ የአገልግሎት ዝርዝር ይምረጡ።", supportText:"🛟 <b>ድጋፍ</b>\nለትዕዛዝ ወይም ለክፍያ እገዛ ከታች ያለውን የድጋፍ ቁልፍ ይጠቀሙ።", supportOff:"🛟 <b>ድጋፍ</b>\nየድጋፍ አድራሻ ገና አልተዋቀረም።",
+    help:"❓ <b>እገዛ</b>\n\n🚀 /services — አገልግሎቶች\n🔥 /offers — ቅናሾች\n📦 /orders — የቅርብ ጊዜ ትዕዛዞች\n💰 /topup — በቦቱ ውስጥ ዋሌት ሙላ\n👛 /wallet — ቀሪ ሂሳብና እንቅስቃሴ\n🛟 /support — ድጋፍ\n🌐 /language — ቋንቋ",
+    language:"🌐 <b>ቋንቋ</b>\nየሚፈልጉትን ቋንቋ ይምረጡ።", changed:"✅ ቋንቋው ወደ አማርኛ ተቀይሯል።", refresh:"ተዘምኗል"
   }
 };
 
-async function telegram(method, payload = {}) {
-  const response = await fetch(`${apiBase}/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.ok) {
-    const description = body?.description || `HTTP ${response.status}`;
-    throw new Error(`${method} failed: ${description}`);
-  }
-  return body.result;
-}
+const money = (m)=>`${(Number(m||0)/100).toLocaleString("en-US",{maximumFractionDigits:2})} ETB`;
+const esc = (v)=>String(v||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+const langOf = (from)=>langs.get(String(from?.id||"")) || (String(from?.language_code||"").toLowerCase().startsWith("am")?"am":"en");
+const prof = (from,lang,syncOrders=false)=>({telegramId:String(from.id),firstName:String(from.first_name||"Telegram User"),lastName:from.last_name||null,username:from.username||null,languageCode:lang,syncOrders});
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
+async function tg(method,payload={}){const r=await fetch(`${tgBase}/${method}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const b=await r.json().catch(()=>null);if(!r.ok||!b?.ok)throw new Error(`${method}: ${b?.description||r.status}`);return b.result;}
+async function api(path,body){const r=await fetch(`${appUrl}${path}`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${token}`},body:JSON.stringify(body)});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||`Backend ${r.status}`);return d;}
+async function account(from,lang,sync=false){const a=await api("/api/bot/account",prof(from,lang,sync));if(["am","en"].includes(a?.user?.languageCode))langs.set(String(from.id),a.user.languageCode);return a;}
+async function send(id,text,markup){return tg("sendMessage",{chat_id:id,text,parse_mode:"HTML",disable_web_page_preview:true,reply_markup:markup});}
+async function edit(id,msg,text,markup){try{return await tg("editMessageText",{chat_id:id,message_id:msg,text,parse_mode:"HTML",disable_web_page_preview:true,reply_markup:markup});}catch(e){if(!String(e.message).includes("message is not modified"))throw e;}}
+async function ack(id,text){try{await tg("answerCallbackQuery",{callback_query_id:id,text});}catch{}}
+const webBtn=(lang,label)=>({text:label||T[lang].open,web_app:{url:appUrl}});
+const topBtn=(lang)=>({text:T[lang].topup,callback_data:"topup:start"});
+function replyKeys(lang){const t=T[lang];return{keyboard:[[{text:t.open,web_app:{url:appUrl}}],[{text:t.topup},{text:t.orders}],[{text:t.wallet},{text:t.offers}],[{text:t.support},{text:t.lang}]],resize_keyboard:true,is_persistent:true,input_field_placeholder:lang==="am"?"አማራጭ ይምረጡ…":"Choose an option…"};}
+function statusLabel(s,l){const en={AWAITING_PAYMENT:"Payment pending",PAID:"Paid",QUEUED:"Queued",PENDING:"Pending",PROCESSING:"Processing",IN_PROGRESS:"In progress",PARTIAL:"Partial",COMPLETED:"Completed",CANCELED:"Canceled",FAILED:"Failed",PROVIDER_ERROR:"Provider issue",PROVIDER_REVIEW:"Under review"};const am={AWAITING_PAYMENT:"ክፍያ በመጠባበቅ ላይ",PAID:"ተከፍሏል",QUEUED:"በተራ ላይ",PENDING:"በመጠባበቅ ላይ",PROCESSING:"በሂደት ላይ",IN_PROGRESS:"በመከናወን ላይ",PARTIAL:"በከፊል",COMPLETED:"ተጠናቋል",CANCELED:"ተሰርዟል",FAILED:"አልተሳካም",PROVIDER_ERROR:"የአቅራቢ ችግኝ",PROVIDER_REVIEW:"በማረጋገጥ ላይ"};return(l==="am"?am:en)[s]||s;}
+const statusEmoji=(s)=>s==="COMPLETED"?"✅":["FAILED","CANCELED","PROVIDER_ERROR"].includes(s)?"❌":"🟡";
+const mask=(v)=>{const d=String(v||"").replace(/\D/g,"");return d.length<7?(v||""):`${d.slice(0,3)}•••${d.slice(-3)}`;};
 
-function languageFor(message) {
-  const chatId = message?.chat?.id;
-  const saved = chatId ? userLanguages.get(chatId) : null;
-  if (saved === "am" || saved === "en") return saved;
-  const telegramLanguage = String(message?.from?.language_code || "").toLowerCase();
-  return telegramLanguage.startsWith("am") ? "am" : "en";
-}
+async function welcome(m,l){try{const a=await account(m.from,l);const n=m.from?.first_name?` ${esc(m.from.first_name)}`:"";await send(m.chat.id,T[l].welcome(n,money(a.balanceMinor),a.activeOrders||0),replyKeys(l));}catch(e){console.error(e);await send(m.chat.id,T[l].error,replyKeys(l));}}
+async function wallet(id,from,l,msg){try{const a=await account(from,l);const x=[T[l].walletTitle,`\n${T[l].balance}: <b>${money(a.balanceMinor)}</b>`];if(a.transactions?.length){x.push(`\n<b>${T[l].recent}</b>`);for(const t of a.transactions)x.push(`${t.amountMinor>=0?"🟢":"⚪️"} ${esc(t.description)} · <b>${t.amountMinor>=0?"+":""}${money(t.amountMinor)}</b>`);}else x.push(`\n${T[l].noActivity}`);const k={inline_keyboard:[[topBtn(l),{text:"🔄",callback_data:"wallet:refresh"}]]};return msg?edit(id,msg,x.join("\n"),k):send(id,x.join("\n"),k);}catch(e){console.error(e);return send(id,T[l].error,replyKeys(l));}}
+async function orders(id,from,l,msg){try{const a=await account(from,l,true);const x=[T[l].ordersTitle];if(!a.orders?.length)x.push(`\n${T[l].noOrders}`);else for(const o of a.orders){x.push(`\n${statusEmoji(o.status)} <b>${esc(o.serviceName)}</b>`);x.push(`${esc(o.publicId)} · ${Number(o.quantity).toLocaleString()} · ${money(o.amountMinor)}`);x.push(`<i>${statusLabel(o.status,l)}</i>`);}const k={inline_keyboard:[[{text:"🔄",callback_data:"orders:refresh"},webBtn(l,l==="am"?"📦 ሙሉ ዝርዝር":"📦 Full details")]]};return msg?edit(id,msg,x.join("\n"),k):send(id,x.join("\n"),k);}catch(e){console.error(e);return send(id,T[l].error,replyKeys(l));}}
+async function offers(id,from,l){try{const a=await account(from,l);const x=[T[l].offersTitle];if(!a.offers?.length)x.push(`\n${T[l].noOffers}`);else for(const o of a.offers){const s=o.scope==="GLOBAL"?(l==="am"?"ሁሉም አገልግሎቶች":"All services"):o.scope;x.push(`\n🔥 <b>${esc(s)}</b> — ${o.percent}% ${l==="am"?"ቅናሽ":"off"}`);}return send(id,x.join("\n"),{inline_keyboard:[[webBtn(l,l==="am"?"🚀 አገልግሎቶች":"🚀 Browse services")]]});}catch{return send(id,T[l].error,replyKeys(l));}}
+async function topStart(id,from,l,msg){try{const a=await account(from,l);flows.set(String(id),{step:"amount",lang:l,from,saved:a.user?.paymentMobile||null});const txt=`${T[l].topupTitle}\n\n${T[l].balance}: <b>${money(a.balanceMinor)}</b>\n${T[l].chooseAmount}`;const k={inline_keyboard:[[{text:"100 ETB",callback_data:"topup:a:100"},{text:"250 ETB",callback_data:"topup:a:250"},{text:"500 ETB",callback_data:"topup:a:500"}],[{text:"1,000 ETB",callback_data:"topup:a:1000"},{text:"2,000 ETB",callback_data:"topup:a:2000"}],[{text:l==="am"?"✍️ ሌላ መጠን":"✍️ Custom amount",callback_data:"topup:custom"}]]};return msg?edit(id,msg,txt,k):send(id,txt,k);}catch(e){console.error(e);return send(id,T[l].error,replyKeys(l));}}
+async function methodStep(id,f,a,msg){f.amountMinor=Math.round(Number(a)*100);f.step="method";flows.set(String(id),f);const txt=`${T[f.lang].topupTitle}\n\n💰 <b>${money(f.amountMinor)}</b>\n${T[f.lang].method}`;const k={inline_keyboard:[[{text:"📱 Telebirr",callback_data:"topup:m:telebirr"},{text:"🏦 CBE Birr",callback_data:"topup:m:cbebirr"}]]};return msg?edit(id,msg,txt,k):send(id,txt,k);}
+async function mobileStep(id,f,m,msg){f.method=m;if(f.saved){f.step="saved";flows.set(String(id),f);return edit(id,msg,`${T[f.lang].topupTitle}\n\n${T[f.lang].saved(mask(f.saved))}`,{inline_keyboard:[[{text:f.lang==="am"?"✅ ይጠቀሙ":"✅ Use this number",callback_data:"topup:use"},{text:f.lang==="am"?"✏️ ቀይር":"✏️ Change",callback_data:"topup:change"}]]});}f.step="mobile";flows.set(String(id),f);return edit(id,msg,T[f.lang].mobile);}
+async function submitTopup(id,f,mobile){try{const r=await api("/api/bot/top-up",{...prof(f.from,f.lang),amountMinor:f.amountMinor,method:f.method,mobile,requestId:crypto.randomUUID()});flows.delete(String(id));const mn=f.method==="telebirr"?"Telebirr":"CBE Birr";return send(id,T[f.lang].sent(money(f.amountMinor),mn),{inline_keyboard:[[{text:f.lang==="am"?"🔄 ክፍያን ያረጋግጡ":"🔄 Check payment",callback_data:`pay:${r.txRef}`}]]});}catch(e){console.error(e);return send(id,T[f.lang].topupError,{inline_keyboard:[[{text:f.lang==="am"?"🔁 እንደገና":"🔁 Try again",callback_data:"topup:start"}]]});}}
+async function checkPay(c){const id=c.message.chat.id,l=langOf(c.from),ref=String(c.data).slice(4);await ack(c.id);try{const r=await api("/api/bot/payment-status",{...prof(c.from,l),txRef:ref});if(r.status==="success")return edit(id,c.message.message_id,T[l].paid(money(r.amountMinor),money(r.balanceMinor)),{inline_keyboard:[[topBtn(l),{text:T[l].wallet,callback_data:"wallet:refresh"}]]});if(r.status==="failed")return edit(id,c.message.message_id,T[l].failed,{inline_keyboard:[[{text:l==="am"?"🔁 እንደገና ሙላ":"🔁 Top up again",callback_data:"topup:start"}]]});return edit(id,c.message.message_id,T[l].pending,{inline_keyboard:[[{text:l==="am"?"🔄 እንደገና ያረጋግጡ":"🔄 Check again",callback_data:`pay:${ref}`}]]});}catch(e){console.error(e);return ack(c.id,T[l].error);}}
+async function support(id,from,l){try{const a=await account(from,l);return a.supportUrl?send(id,T[l].supportText,{inline_keyboard:[[{text:T[l].support,url:a.supportUrl}]]}):send(id,T[l].supportOff,replyKeys(l));}catch{return send(id,T[l].supportOff,replyKeys(l));}}
+async function setLang(id,from,l,msg){langs.set(String(from.id),l);try{await account(from,l);}catch{}return msg?edit(id,msg,T[l].changed,{inline_keyboard:[[webBtn(l)]]}):send(id,T[l].changed,replyKeys(l));}
 
-function miniAppKeyboard(lang, label) {
-  return {
-    inline_keyboard: [[
-      {
-        text: label || copy[lang].open,
-        web_app: { url: appUrl },
-      },
-    ]],
-  };
-}
+async function onMessage(m){if(!m?.chat?.id||m.chat.type!=="private"||typeof m.text!=="string")return;const id=m.chat.id,text=m.text.trim(),n=text.toLowerCase(),cmd=n.startsWith("/")?n.split(/\s+/,1)[0].split("@",1)[0]:"";if(cmd==="/am"||text==="🇪🇹 አማርኛ")return setLang(id,m.from,"am");if(cmd==="/en"||text==="🇬🇧 English")return setLang(id,m.from,"en");const l=langOf(m.from),f=flows.get(String(id));if(f?.step==="custom"){const a=Number(text.replace(/,/g,""));if(!Number.isFinite(a)||a<10||a>50000)return send(id,T[l].badAmount);return methodStep(id,f,a);}if(f?.step==="mobile"){const d=text.replace(/\D/g,""),local=d.startsWith("251")?`0${d.slice(3)}`:d;if(!/^0[79]\d{8}$/.test(local))return send(id,T[l].badMobile);return submitTopup(id,f,local);}if(["/start","/menu"].includes(cmd))return welcome(m,l);if(["/language","/lang"].includes(cmd))return send(id,T[l].language,{inline_keyboard:[[{text:"🇪🇹 አማርኛ",callback_data:"lang:am"},{text:"🇬🇧 English",callback_data:"lang:en"}]]});if(cmd==="/services"||["services","🚀 services","አገልግሎቶች","🚀 አገልግሎቶች"].includes(n))return send(id,T[l].services,{inline_keyboard:[[webBtn(l,l==="am"?"🚀 አገልግሎቶች":"🚀 Browse services")]]});if(cmd==="/offers"||["offers","🔥 offers","ቅናሾች","🔥 ቅናሾች"].includes(n))return offers(id,m.from,l);if(cmd==="/orders"||["orders","📦 orders","ትዕዛዞች","📦 ትዕዛዞች"].includes(n))return orders(id,m.from,l);if(["/topup","/top_up"].includes(cmd)||["topup","top up","💰 top up","ዋሌት ሙላ","💰 ዋሌት ሙላ"].includes(n))return topStart(id,m.from,l);if(["/wallet","/balance"].includes(cmd)||["wallet","balance","👛 wallet","ዋሌት","👛 ዋሌት"].includes(n))return wallet(id,m.from,l);if(cmd==="/support"||["support","🛟 support","ድጋፍ","🛟 ድጋፍ"].includes(n))return support(id,m.from,l);if(cmd==="/help"||n==="help")return send(id,T[l].help,replyKeys(l));return welcome(m,l);}
+async function onCallback(c){if(!c?.message?.chat?.id)return;const id=c.message.chat.id,l=langOf(c.from),d=String(c.data||"");if(d==="lang:am"||d==="lang:en"){await ack(c.id);return setLang(id,c.from,d.endsWith("am")?"am":"en",c.message.message_id);}if(d==="wallet:refresh"){await ack(c.id,T[l].refresh);return wallet(id,c.from,l,c.message.message_id);}if(d==="orders:refresh"){await ack(c.id,T[l].refresh);return orders(id,c.from,l,c.message.message_id);}if(d==="topup:start"){await ack(c.id);return topStart(id,c.from,l,c.message.message_id);}if(d==="topup:custom"){await ack(c.id);const f=flows.get(String(id))||{lang:l,from:c.from};f.step="custom";flows.set(String(id),f);return edit(id,c.message.message_id,T[l].custom);}if(d.startsWith("topup:a:")){await ack(c.id);const f=flows.get(String(id))||{lang:l,from:c.from};return methodStep(id,f,Number(d.split(":")[2]),c.message.message_id);}if(d.startsWith("topup:m:")){await ack(c.id);const f=flows.get(String(id));if(!f?.amountMinor)return topStart(id,c.from,l,c.message.message_id);return mobileStep(id,f,d.endsWith("cbebirr")?"cbebirr":"telebirr",c.message.message_id);}if(d==="topup:use"){await ack(c.id);const f=flows.get(String(id));if(!f?.saved||!f.amountMinor||!f.method)return topStart(id,c.from,l,c.message.message_id);return submitTopup(id,f,f.saved);}if(d==="topup:change"){await ack(c.id);const f=flows.get(String(id));if(!f)return topStart(id,c.from,l,c.message.message_id);f.step="mobile";flows.set(String(id),f);return edit(id,c.message.message_id,T[l].mobile);}if(d.startsWith("pay:"))return checkPay(c);return ack(c.id);}
 
-function mainReplyKeyboard(lang) {
-  const text = copy[lang];
-  return {
-    keyboard: [
-      [{ text: text.open, web_app: { url: appUrl } }],
-      [{ text: text.topup }, { text: text.orders }],
-      [{ text: text.wallet }, { text: text.support }],
-      [{ text: text.languageButton }],
-    ],
-    resize_keyboard: true,
-    is_persistent: true,
-    input_field_placeholder: text.choose,
-  };
-}
-
-function languageKeyboard() {
-  return {
-    keyboard: [[{ text: "🇪🇹 አማርኛ" }, { text: "🇬🇧 English" }]],
-    resize_keyboard: true,
-    one_time_keyboard: true,
-    input_field_placeholder: "Language / ቋንቋ",
-  };
-}
-
-async function sendMessage(chatId, text, replyMarkup) {
-  await telegram("sendMessage", {
-    chat_id: chatId,
-    text,
-    parse_mode: "HTML",
-    disable_web_page_preview: true,
-    reply_markup: replyMarkup,
-  });
-}
-
-async function sendOpen(chatId, lang, text, label) {
-  await sendMessage(chatId, text, miniAppKeyboard(lang, label));
-}
-
-async function sendWelcome(message, lang) {
-  const firstName = message.from?.first_name;
-  const name = firstName && String(firstName).trim() ? ` ${escapeHtml(String(firstName).trim())}` : "";
-  await sendMessage(message.chat.id, copy[lang].welcome(name), mainReplyKeyboard(lang));
-}
-
-async function sendServices(chatId, lang) {
-  await sendOpen(chatId, lang, copy[lang].servicesText, copy[lang].servicesButton);
-}
-
-async function sendOrders(chatId, lang) {
-  await sendOpen(chatId, lang, copy[lang].ordersText, copy[lang].ordersButton);
-}
-
-async function sendTopUp(chatId, lang) {
-  await sendOpen(chatId, lang, copy[lang].topupText, copy[lang].topupButton);
-}
-
-async function sendWallet(chatId, lang) {
-  await sendOpen(chatId, lang, copy[lang].walletText, copy[lang].walletButton);
-}
-
-async function sendOffers(chatId, lang) {
-  await sendOpen(chatId, lang, copy[lang].offersText, copy[lang].offersButton);
-}
-
-async function sendSupport(chatId, lang) {
-  await sendOpen(chatId, lang, copy[lang].supportText, copy[lang].supportButton);
-}
-
-async function sendHelp(chatId, lang) {
-  await sendMessage(chatId, copy[lang].help, mainReplyKeyboard(lang));
-}
-
-async function sendLanguage(chatId, lang) {
-  await sendMessage(chatId, copy[lang].languagePrompt, languageKeyboard());
-}
-
-function normalizeText(text) {
-  return String(text || "").trim().toLowerCase();
-}
-
-async function handleUpdate(update) {
-  const message = update?.message;
-  if (!message?.chat?.id || message.chat.type !== "private") return;
-
-  const text = typeof message.text === "string" ? message.text.trim() : "";
-  if (!text) return;
-
-  const normalized = normalizeText(text);
-  const command = normalized.startsWith("/")
-    ? normalized.split(/\s+/, 1)[0].split("@", 1)[0]
-    : "";
-
-  if (command === "/am" || text === "🇪🇹 አማርኛ") {
-    userLanguages.set(message.chat.id, "am");
-    await sendMessage(message.chat.id, copy.am.languageChanged, mainReplyKeyboard("am"));
-    return;
-  }
-  if (command === "/en" || text === "🇬🇧 English") {
-    userLanguages.set(message.chat.id, "en");
-    await sendMessage(message.chat.id, copy.en.languageChanged, mainReplyKeyboard("en"));
-    return;
-  }
-
-  const lang = languageFor(message);
-
-  if (command === "/start" || command === "/menu") {
-    await sendWelcome(message, lang);
-    return;
-  }
-  if (command === "/language" || command === "/lang") {
-    await sendLanguage(message.chat.id, lang);
-    return;
-  }
-  if (command === "/services" || ["services", "🚀 services", "አገልግሎቶች", "🚀 አገልግሎቶች"].includes(normalized)) {
-    await sendServices(message.chat.id, lang);
-    return;
-  }
-  if (command === "/offers" || ["offers", "🔥 offers", "ቅናሾች", "🔥 ቅናሾች"].includes(normalized)) {
-    await sendOffers(message.chat.id, lang);
-    return;
-  }
-  if (command === "/orders" || ["orders", "📦 orders", "ትዕዛዞች", "ትዕዛዞቼ", "📦 ትዕዛዞች"].includes(normalized)) {
-    await sendOrders(message.chat.id, lang);
-    return;
-  }
-  if (
-    command === "/topup" ||
-    command === "/top_up" ||
-    ["topup", "top up", "💰 top up", "ዋሌት ሙላ", "💰 ዋሌት ሙላ", "ገንዘብ ጨምር"].includes(normalized)
-  ) {
-    await sendTopUp(message.chat.id, lang);
-    return;
-  }
-  if (
-    command === "/wallet" ||
-    command === "/balance" ||
-    ["wallet", "balance", "👛 wallet", "ዋሌት", "👛 ዋሌት"].includes(normalized)
-  ) {
-    await sendWallet(message.chat.id, lang);
-    return;
-  }
-  if (command === "/support" || ["support", "🛟 support", "ድጋፍ", "🛟 ድጋፍ"].includes(normalized)) {
-    await sendSupport(message.chat.id, lang);
-    return;
-  }
-  if (command === "/help" || ["help", "❓ help", "እገዛ", "❓ እገዛ"].includes(normalized)) {
-    await sendHelp(message.chat.id, lang);
-    return;
-  }
-
-  await sendMessage(message.chat.id, copy[lang].fallback, mainReplyKeyboard(lang));
-}
-
-async function safeConfigure(method, payload) {
-  try {
-    await telegram(method, payload);
-  } catch (error) {
-    console.warn(`${method} skipped:`, error instanceof Error ? error.message : error);
-  }
-}
-
-async function configureBot() {
-  await telegram("deleteWebhook", { drop_pending_updates: false });
-
-  const englishCommands = [
-    { command: "start", description: "✨ Open Dink Promotion" },
-    { command: "services", description: "🚀 Browse services" },
-    { command: "offers", description: "🔥 View current offers" },
-    { command: "orders", description: "📦 Track orders" },
-    { command: "topup", description: "💰 Add funds" },
-    { command: "wallet", description: "👛 View wallet" },
-    { command: "support", description: "🛟 Get support" },
-    { command: "language", description: "🌐 Change language" },
-    { command: "help", description: "❓ Help" },
-  ];
-
-  const amharicCommands = [
-    { command: "start", description: "✨ Dink Promotion ይክፈቱ" },
-    { command: "services", description: "🚀 አገልግሎቶችን ይመልከቱ" },
-    { command: "offers", description: "🔥 ቅናሾችን ይመልከቱ" },
-    { command: "orders", description: "📦 ትዕዛዞችን ይከታተሉ" },
-    { command: "topup", description: "💰 ዋሌት ይሙሉ" },
-    { command: "wallet", description: "👛 ዋሌት ይመልከቱ" },
-    { command: "support", description: "🛟 ድጋፍ ያግኙ" },
-    { command: "language", description: "🌐 ቋንቋ ይቀይሩ" },
-    { command: "help", description: "❓ እገዛ" },
-  ];
-
-  await telegram("setMyCommands", { commands: englishCommands });
-  await safeConfigure("setMyCommands", { commands: amharicCommands, language_code: "am" });
-
-  await safeConfigure("setMyShortDescription", {
-    short_description: "🚀 Promote • 💰 Top up • 📦 Track orders",
-  });
-  await safeConfigure("setMyShortDescription", {
-    language_code: "am",
-    short_description: "🚀 ፕሮሞሽን • 💰 ዋሌት ሙላ • 📦 ትዕዛዝ ክትትል",
-  });
-
-  await safeConfigure("setMyDescription", {
-    description: "✨ Dink Promotion\n🚀 Promotion services in ETB\n🔥 Automatic offers\n💰 Top up your wallet\n📦 Track every order",
-  });
-  await safeConfigure("setMyDescription", {
-    language_code: "am",
-    description: "✨ Dink Promotion\n🚀 የፕሮሞሽን አገልግሎቶች በብር\n🔥 ቅናሾች በራስ-ሰር\n💰 ዋሌትዎን ይሙሉ\n📦 ትዕዛዞችዎን ይከታተሉ",
-  });
-
-  await telegram("setChatMenuButton", {
-    menu_button: {
-      type: "web_app",
-      text: "Dink Promotion",
-      web_app: { url: appUrl },
-    },
-  });
-
-  const me = await telegram("getMe");
-  console.log(`Dink Promotion bot online as @${me.username || me.id}`);
-  console.log(`Mini App URL: ${appUrl}`);
-}
-
-async function poll() {
-  while (!stopped) {
-    try {
-      const updates = await telegram("getUpdates", {
-        offset,
-        timeout: 30,
-        allowed_updates: ["message"],
-      });
-
-      for (const update of updates) {
-        offset = Math.max(offset, Number(update.update_id) + 1);
-        try {
-          await handleUpdate(update);
-        } catch (error) {
-          console.error("Update handling failed:", error instanceof Error ? error.message : error);
-        }
-      }
-    } catch (error) {
-      if (stopped) break;
-      console.error("Telegram polling failed:", error instanceof Error ? error.message : error);
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-    }
-  }
-}
-
-process.on("SIGTERM", () => { stopped = true; });
-process.on("SIGINT", () => { stopped = true; });
-
-(async () => {
-  try {
-    await configureBot();
-    await poll();
-  } catch (error) {
-    console.error("Bot startup failed:", error instanceof Error ? error.message : error);
-    process.exit(1);
-  }
-})();
+async function configure(){await tg("deleteWebhook",{drop_pending_updates:false});const en=[{command:"start",description:"✨ Open your Dink account"},{command:"services",description:"🚀 Browse services"},{command:"offers",description:"🔥 Current offers"},{command:"orders",description:"📦 Latest orders"},{command:"topup",description:"💰 Top up wallet"},{command:"wallet",description:"👛 Balance & activity"},{command:"support",description:"🛟 Support"},{command:"language",description:"🌐 Change language"},{command:"help",description:"❓ Help"}];const am=[{command:"start",description:"✨ የDink መለያዎን ይክፈቱ"},{command:"services",description:"🚀 አገልግሎቶች"},{command:"offers",description:"🔥 ቅናሾች"},{command:"orders",description:"📦 ትዕዛዞች"},{command:"topup",description:"💰 ዋሌት ሙላ"},{command:"wallet",description:"👛 ቀሪ ሂሳብ"},{command:"support",description:"🛟 ድጋፍ"},{command:"language",description:"🌐 ቋንቋ"},{command:"help",description:"❓ እገዛ"}];await tg("setMyCommands",{commands:en});try{await tg("setMyCommands",{commands:am,language_code:"am"});}catch{}try{await tg("setMyDescription",{description:"✨ Dink Promotion\n👛 Live wallet balance\n💰 Top up inside the bot\n📦 Live order status\n🔥 Current offers"});}catch{}await tg("setChatMenuButton",{menu_button:{type:"web_app",text:"🚀 Dink Promotion",web_app:{url:appUrl}}});const me=await tg("getMe");console.log(`Dink Promotion bot online as @${me.username||me.id}`);}
+async function poll(){while(!stopped){try{const ups=await tg("getUpdates",{offset,timeout:30,allowed_updates:["message","callback_query"]});for(const u of ups){offset=Math.max(offset,Number(u.update_id)+1);try{if(u.callback_query)await onCallback(u.callback_query);else if(u.message)await onMessage(u.message);}catch(e){console.error("Update failed",e);}}}catch(e){if(stopped)break;console.error("Polling failed",e);await new Promise(r=>setTimeout(r,2500));}}}
+process.on("SIGTERM",()=>{stopped=true;});process.on("SIGINT",()=>{stopped=true;});
+(async()=>{try{await configure();await poll();}catch(e){console.error("Bot startup failed",e);process.exit(1);}})();
