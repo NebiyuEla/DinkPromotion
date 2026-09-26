@@ -1,0 +1,189 @@
+/* Small final-pass overrides: stronger hierarchy, no decorative clutter. */
+body {
+  font-weight: 500;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+.nav-button span,
+.app-top-copy strong,
+.section-heading h2,
+.service-row strong,
+.admin-panel h2,
+.admin-table th,
+.admin-metric strong {
+  font-weight: 700;
+}
+
+.hero-copy,
+.app-top-copy span,
+.service-row small,
+.admin-panel p,
+.admin-title span,
+.admin-table small,
+label span {
+  font-weight: 500;
+}
+
+.brand-logo {
+  display: block;
+  object-fit: contain;
+}
+
+.admin-gate-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.admin-panel-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.broadcast-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 24px;
+  align-items: start;
+}
+
+.broadcast-form {
+  display: grid;
+  gap: 14px;
+}
+
+.broadcast-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.broadcast-form label > span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.broadcast-form label small {
+  color: #77817c;
+  font-weight: 500;
+}
+
+.broadcast-form input,
+.broadcast-form textarea {
+  width: 100%;
+  border: 1px solid #dfe5e2;
+  border-radius: 12px;
+  background: #fff;
+  color: #151a18;
+  padding: 11px 12px;
+  outline: none;
+}
+
+.broadcast-form textarea {
+  min-height: 118px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.broadcast-form input:focus,
+.broadcast-form textarea:focus {
+  border-color: #29c548;
+  box-shadow: 0 0 0 3px rgba(41, 197, 72, 0.1);
+}
+
+.broadcast-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.broadcast-send {
+  width: fit-content;
+}
+
+.broadcast-preview {
+  position: sticky;
+  top: 84px;
+  border: 1px solid #e2e8e5;
+  border-radius: 16px;
+  background: #f7f9f8;
+  padding: 14px;
+}
+
+.preview-label {
+  display: block;
+  margin-bottom: 10px;
+  color: #6f7874;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.telegram-preview-card {
+  display: grid;
+  gap: 9px;
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
+  box-shadow: 0 1px 4px rgba(22, 30, 26, 0.08);
+}
+
+.telegram-preview-card strong {
+  font-size: 15px;
+}
+
+.telegram-preview-card p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #303733;
+  line-height: 1.45;
+}
+
+.telegram-preview-card code {
+  width: fit-content;
+  border-radius: 6px;
+  background: #edf1ef;
+  padding: 4px 7px;
+  font-weight: 700;
+}
+
+.telegram-preview-card button {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid #eef1ef;
+  background: transparent;
+  color: #159b36;
+  padding: 10px 0 0;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+@media (max-width: 820px) {
+  .broadcast-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .broadcast-preview {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .broadcast-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-gate-actions,
+  .admin-gate-actions button,
+  .broadcast-send {
+    width: 100%;
+  }
+}
