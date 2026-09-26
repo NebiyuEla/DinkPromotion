@@ -10,7 +10,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Dink Promotion",
   description: "Fast, simple social media promotion inside Telegram.",
-  icons: { icon: "/dink-promotion-logo.png" },
+  icons: {
+    icon: [{ url: "/dink-promotion-mark.png", type: "image/png", sizes: "120x120" }],
+    apple: "/dink-promotion-mark.png",
+  },
 };
 
 export const viewport: Viewport = {
