@@ -62,6 +62,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     });
     if (!order) throw new AppError("Order not found", 404, "ORDER_NOT_FOUND");
 
+    if (
+      !order.service.active ||
+      !order.service.compatible ||
+      order.quantity < order.service.minQuantity ||
+      order.quantity > order.service.maxQuantity
+    ) {
+      throw new AppError(
+        "This service changed before payment. Choose the service again to continue.",
+        409,
+        "SERVICE_CHANGED",
+      );
+    }
+
     if (method === "wallet") {
       if (order.payment?.status === PaymentStatus.PENDING) {
         throw new AppError("A payment request is already pending. Check its status first.", 409, "PAYMENT_PENDING");
