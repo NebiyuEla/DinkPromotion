@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT
+  PAID
+  QUEUED
+  PENDING
+  PROCESSING
+  IN_PROGRESS
+  PARTIAL
+  COMPLETED
+  CANCELED
+  FAILED
+  PROVIDER_ERROR
+  PROVIDER_REVIEW
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PaymentKind {
+  ORDER
+  WALLET_TOPUP
+}
+
+enum WalletTransactionType {
+  TOP_UP
+  ORDER_DEBIT
+  ORDER_REFUND
+  ADJUSTMENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  telegramId   String   @unique
+  firstName    String
+  lastName     String?
+  username     String?
+  photoUrl     String?
+  languageCode String?
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  wallet             WalletAccount?
+  orders             Order[]
+  payments           Payment[]
+  walletTransactions WalletTransaction[]
+  auditLogs          AuditLog[]
+}
+
+model Service {
+  id                     String   @id @default(cuid())
+  provider               String   @default("PRM4U")
+  providerServiceId      Int
+  providerName           String
+  providerType           String
+  providerCategory       String
+  providerRateUsd        String
+  displayName            String
+  description            String?
+  platform               String
+  category               String
+  minQuantity            Int
+  maxQuantity            Int
+  refill                  Boolean  @default(false)
+  cancel                  Boolean  @default(false)
+  compatible              Boolean  @default(true)
+  pricePerThousandMinor   Int      @default(0)
+  active                  Boolean  @default(false)
+  featured                Boolean  @default(false)
+  sortOrder               Int      @default(1000)
+  lastProviderSyncAt      DateTime @default(now())
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  orders Order[]
+
+  @@unique([provider, providerServiceId])
+  @@index([active, platform, category])
+  @@index([featured, active])
+}
+
+model Order {
+  id                        String      @id @default(cuid())
+  publicId                  String      @unique
+  userId                    String
+  serviceId                 String
+  provider                  String      @default("PRM4U")
+  providerServiceIdSnapshot Int
+  providerOrderId           String?
+  providerStatusRaw         String?
+  providerChargeUsd         String?
+  link                      String
+  quantity                  Int
+  amountMinor               Int
+  currency                  String      @default("ETB")
+  status                    OrderStatus @default(AWAITING_PAYMENT)
+  startCount                String?
+  remains                   String?
+  refillId                  String?
+  refillStatus              String?
+  cancelRequestedAt         DateTime?
+  completedAt               DateTime?
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  payment Payment?
+
+  @@index([userId, createdAt])
+  @@index([status, updatedAt])
+  @@index([providerOrderId])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  txRef       String        @unique
+  userId      String
+  orderId     String?       @unique
+  kind        PaymentKind
+  amountMinor Int
+  currency    String        @default("ETB")
+  status      PaymentStatus @default(PENDING)
+  checkoutUrl String?
+  chapaRef    String?
+  chapaMode   String?
+  verifiedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user              User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order             Order?              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  walletTransaction WalletTransaction?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model WalletAccount {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  balanceMinor Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WalletTransaction {
+  id           String                @id @default(cuid())
+  userId       String
+  paymentId    String?               @unique
+  type         WalletTransactionType
+  amountMinor  Int
+  balanceAfter Int
+  reference    String                @unique
+  description  String
+  createdAt    DateTime              @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+}
