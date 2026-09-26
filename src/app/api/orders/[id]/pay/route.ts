@@ -8,6 +8,13 @@ import { newPaymentRef, payOrderFromWallet } from "@/lib/orders";
 import { serializeOrder } from "@/lib/serializers";
 import { payOrderSchema } from "@/lib/validators";
 
+async function rememberPaymentMobile(userId: string, mobile: string) {
+  await prisma.user.updateMany({
+    where: { id: userId, paymentMobile: null },
+    data: { paymentMobile: mobile },
+  });
+}
+
 async function startDirectPayment(input: {
   paymentId: string;
   txRef: string;
@@ -103,6 +110,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         firstName: user.firstName,
         lastName: user.lastName,
       });
+      await rememberPaymentMobile(user.id, normalizedMobile);
       return NextResponse.json(result);
     }
 
@@ -124,6 +132,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       firstName: user.firstName,
       lastName: user.lastName,
     });
+    await rememberPaymentMobile(user.id, normalizedMobile);
     return NextResponse.json(result);
   } catch (error) {
     return jsonError(error);

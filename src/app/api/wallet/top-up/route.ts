@@ -7,6 +7,13 @@ import { AppError, jsonError } from "@/lib/http";
 import { newPaymentRef } from "@/lib/orders";
 import { walletTopUpSchema } from "@/lib/validators";
 
+async function rememberPaymentMobile(userId: string, mobile: string) {
+  await prisma.user.updateMany({
+    where: { id: userId, paymentMobile: null },
+    data: { paymentMobile: mobile },
+  });
+}
+
 async function startWalletCharge(input: {
   paymentId: string;
   txRef: string;
@@ -92,6 +99,7 @@ export async function POST(request: NextRequest) {
         firstName: user.firstName,
         lastName: user.lastName,
       });
+      await rememberPaymentMobile(user.id, normalizedMobile);
       return NextResponse.json(result);
     }
 
@@ -112,6 +120,7 @@ export async function POST(request: NextRequest) {
       firstName: user.firstName,
       lastName: user.lastName,
     });
+    await rememberPaymentMobile(user.id, normalizedMobile);
     return NextResponse.json(result);
   } catch (error) {
     return jsonError(error);

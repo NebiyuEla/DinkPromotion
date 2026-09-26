@@ -41,16 +41,17 @@ enum WalletTransactionType {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  telegramId   String   @unique
-  firstName    String
-  lastName     String?
-  username     String?
-  photoUrl     String?
-  languageCode String?
-  isAdmin      Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  telegramId    String   @unique
+  firstName     String
+  lastName      String?
+  username      String?
+  photoUrl      String?
+  languageCode  String?
+  paymentMobile String?
+  isAdmin       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   wallet             WalletAccount?
   orders             Order[]

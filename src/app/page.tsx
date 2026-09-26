@@ -1,5 +1,5 @@
-import { MiniApp } from "@/components/MiniApp";
+import { MiniAppV2 } from "@/components/MiniAppV2";
 
 export default function Page() {
-  return <MiniApp />;
+  return <MiniAppV2 />;
 }

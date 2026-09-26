@@ -1,5 +1,10 @@
 import type { Order, Payment, Service, User, WalletTransaction } from "@prisma/client";
 
+function localPaymentMobile(value: string | null) {
+  if (!value) return null;
+  return /^251[79]\d{8}$/.test(value) ? `0${value.slice(3)}` : value;
+}
+
 export function serializeUser(user: User) {
   return {
     id: user.id,
@@ -9,6 +14,7 @@ export function serializeUser(user: User) {
     username: user.username,
     photoUrl: user.photoUrl,
     languageCode: user.languageCode,
+    paymentMobile: localPaymentMobile(user.paymentMobile),
     isAdmin: user.isAdmin,
   };
 }
