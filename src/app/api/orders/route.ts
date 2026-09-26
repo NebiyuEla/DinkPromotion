@@ -2,6 +2,7 @@ import { OrderStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { discountedServicePrice, getDiscountMap } from "@/lib/discounts";
 import { AppError, jsonError } from "@/lib/http";
 import { calculateOrderAmountMinor } from "@/lib/pricing";
 import { createOrderSchema } from "@/lib/validators";
@@ -65,7 +66,10 @@ export async function POST(request: NextRequest) {
         "QUANTITY_OUT_OF_RANGE",
       );
     }
-    const amountMinor = calculateOrderAmountMinor(service.pricePerThousandMinor, input.quantity);
+
+    const discounts = await getDiscountMap();
+    const discounted = discountedServicePrice(service.pricePerThousandMinor, service.platform, discounts);
+    const amountMinor = calculateOrderAmountMinor(discounted.priceMinor, input.quantity);
     const order = await prisma.order.create({
       data: {
         publicId: newPublicOrderId(),
