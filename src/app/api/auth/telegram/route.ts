@@ -15,8 +15,9 @@ export async function POST(request: NextRequest) {
     const telegramId = String(telegram.id);
     const admin = isTelegramAdmin(telegramId);
 
-    // Reuse the signed 30-day session when this Telegram account is already known.
-    // This avoids treating every Mini App open like a brand-new registration.
+    // Reuse the signed session when this Telegram account is already known.
+    // Refresh the cookie so regular users stay signed in without being treated
+    // like a new registration on every Mini App open.
     const sessionUser = await getSessionUser();
     if (sessionUser?.telegramId === telegramId) {
       const changed =
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
           })
         : sessionUser;
 
+      await setSessionCookie(user.id);
       return NextResponse.json({ user: serializeUser(user) });
     }
 
