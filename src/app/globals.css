@@ -574,3 +574,25 @@ body { font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sa
   .direct-method small { display: none; }
   .service-price b { font-size: 11px; }
 }
+
+/* Compact customer navigation */
+.app-top { grid-template-columns: 46px minmax(0, 1fr); gap: 13px; min-height: 66px; }
+.app-top-copy { text-align: left; justify-content: center; }
+.app-top-copy strong { font-size: 17px; letter-spacing: -.02em; }
+.brand-compact { width: 46px; height: 46px; display: grid; place-items: center; }
+.brand-compact .brand-logo { width: 38px; height: 38px; }
+.platform-filter { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin: 0 0 12px; }
+.platform-filter-button { min-width: 0; min-height: 41px; padding: 7px 5px; display: flex; align-items: center; justify-content: center; gap: 6px; background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 11px; font-size: 11px; font-weight: 750; cursor: pointer; }
+.platform-filter-button:first-child { grid-column: 1 / -1; }
+.platform-filter-button svg { flex: 0 0 auto; }
+.platform-filter-button.active { background: #111615; color: #fff; border-color: #111615; }
+.bottom-nav { background: #fff; backdrop-filter: none; }
+.nav-button { border-radius: 8px; font-size: 11px; font-weight: 800; color: #636e68; }
+.nav-button.active { color: #12862b; background: transparent; }
+.nav-button.active::before { content: ""; position: absolute; top: 0; width: 28px; height: 3px; border-radius: 0 0 3px 3px; background: #24c640; }
+.nav-button { position: relative; }
+.mobile-field input { font-variant-numeric: tabular-nums; letter-spacing: .035em; }
+@media (max-width: 360px) {
+  .platform-filter-button { font-size: 10px; gap: 4px; }
+  .nav-button { font-size: 10px; }
+}

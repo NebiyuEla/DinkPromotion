@@ -633,7 +633,6 @@ function AppTop({ title, subtitle, back }: { title: string; subtitle?: string; b
         <strong>{title}</strong>
         {subtitle && <span>{subtitle}</span>}
       </div>
-      <span className="app-top-spacer" />
     </div>
   );
 }
@@ -714,9 +713,9 @@ function ServicesView({ services, servicesState, retryServices, platform, setPla
     <>
       <AppTop title="Services" subtitle="Choose what you want to promote" />
       <div className="search-box"><Search size={18} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services" /></div>
-      <div className="chip-scroll" aria-label="Platforms">
+      <div className="platform-filter" aria-label="Platforms">
         {platformOrder.map((item) => (
-          <button type="button" key={item} className={`chip ${platform === item ? "active" : ""}`} onClick={() => { setPlatform(item); setCategory("All"); }}>{item !== "All" && <PlatformIcon platform={item} size={16} />}{item.replace(" / Twitter", "")}</button>
+          <button type="button" key={item} aria-pressed={platform === item} className={`platform-filter-button ${platform === item ? "active" : ""}`} onClick={() => { setPlatform(item); setCategory("All"); }}>{item !== "All" && <PlatformIcon platform={item} size={17} />}{item === "All" ? "All platforms" : item.replace(" / Twitter", "")}</button>
         ))}
       </div>
       <div className="filter-row">
@@ -728,7 +727,7 @@ function ServicesView({ services, servicesState, retryServices, platform, setPla
         if (!items.length) return null;
         return <section className="service-group" key={name}><div className="service-group-head"><span className={`service-icon ${platformClass(name)}`}><PlatformIcon platform={name} size={19} /></span><h2>{name.replace(" / Twitter", "")}</h2><small>{items.length}</small></div><div className="service-stack">{items.map((service) => <ServiceRow key={service.id} service={service} onClick={() => openService(service)} />)}</div></section>;
       }) : <div className="service-stack">{services.map((service) => <ServiceRow key={service.id} service={service} onClick={() => openService(service)} />)}</div>}
-      {servicesState === "loading" ? <LoadingState /> : servicesState === "error" ? <ErrorState retry={retryServices} /> : !services.length && <EmptyState title="No matching services" text="Try another platform, service type or search. If all filters are clear, there are no services available yet." />}
+      {servicesState === "loading" ? <LoadingState /> : servicesState === "error" ? <ErrorState retry={retryServices} /> : !services.length && <EmptyState title={platform === "All" && category === "All" && !search ? "No services published yet" : "No matching services"} text={platform === "All" && category === "All" && !search ? "The catalog will appear here after services are priced and published." : "Try another platform, service type or search."} />}
     </>
   );
 }
@@ -794,9 +793,13 @@ function PaymentMethodButton({ method, selected, onClick }: { method: DirectMeth
 }
 
 function MobileField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  function updateMobile(input: string) {
+    const digits = input.replace(/\D/g, "");
+    onChange((digits.startsWith("251") ? `0${digits.slice(3)}` : digits).slice(0, 10));
+  }
   return <label className="field-label mobile-field">Mobile number
-    <input type="tel" inputMode="tel" autoComplete="tel-national" required pattern="(?:0[79][0-9]{8}|(?:\+?251)[79][0-9]{8})" value={value} onChange={(event) => onChange(event.target.value)} placeholder="09xxxxxxxx" />
-    <span className="field-help">Use the number registered with your selected payment app.</span>
+    <input type="tel" inputMode="numeric" autoComplete="tel-national" required minLength={10} maxLength={10} pattern="0[79][0-9]{8}" value={value} onChange={(event) => updateMobile(event.target.value)} placeholder="0912345678" aria-describedby="mobile-number-help" />
+    <span className="field-help" id="mobile-number-help">Enter your 10-digit Ethiopian number, starting with 09 or 07. Use the number registered with your payment app.</span>
   </label>;
 }
 
