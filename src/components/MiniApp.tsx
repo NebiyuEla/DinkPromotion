@@ -811,7 +811,7 @@ function WalletView({ balanceMinor, transactions, amount, setAmount, topUp, auth
 }
 
 function ProfileView({ user, authState, ordersCount, balanceMinor, support, more }: { user: User | null; authState: string; ordersCount: number; balanceMinor: number; support: () => void; more: () => void }) {
-  if (!user) return <><AppTop title="Profile" subtitle="Your Dink account" /><TelegramRequired state={authState} /></>;
+  if (!user) return <><AppTop title="Profile" subtitle="Your Dink account" /><TelegramRequired state={authState} /><div className="menu-list profile-public-menu"><button type="button" onClick={support}><LifeBuoy size={19} /><span><strong>Support</strong><small>Help and contact options</small></span><ChevronRight size={18} /></button><button type="button" onClick={more}><Settings2 size={19} /><span><strong>More & settings</strong><small>App information</small></span><ChevronRight size={18} /></button></div></>;
   return (
     <>
       <AppTop title="Profile" subtitle="Telegram account" />
