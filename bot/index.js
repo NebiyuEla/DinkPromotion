@@ -117,6 +117,14 @@ async function sendWallet(chatId) {
   );
 }
 
+async function sendOffers(chatId) {
+  await sendOpen(
+    chatId,
+    "🔥 <b>Offers</b>\nCurrent discounts are applied automatically to live service prices.",
+    "🔥 View offers",
+  );
+}
+
 async function sendSupport(chatId) {
   await sendOpen(
     chatId,
@@ -128,7 +136,7 @@ async function sendSupport(chatId) {
 async function sendHelp(chatId) {
   await sendMessage(
     chatId,
-    "❓ <b>Help</b>\n\n🚀 /services — Browse services\n📦 /orders — Track orders\n💰 /topup — Add funds\n👛 /wallet — View wallet\n🛟 /support — Get help",
+    "❓ <b>Help</b>\n\n🚀 /services — Browse services\n🔥 /offers — View current offers\n📦 /orders — Track orders\n💰 /topup — Add funds\n👛 /wallet — View wallet\n🛟 /support — Get help",
     mainReplyKeyboard(),
   );
 }
@@ -155,6 +163,10 @@ async function handleUpdate(update) {
   }
   if (command === "/services" || normalized === "services" || normalized === "🚀 services") {
     await sendServices(message.chat.id);
+    return;
+  }
+  if (command === "/offers" || normalized === "offers" || normalized === "🔥 offers") {
+    await sendOffers(message.chat.id);
     return;
   }
   if (command === "/orders" || normalized === "orders" || normalized === "📦 orders") {
@@ -190,15 +202,6 @@ async function handleUpdate(update) {
     return;
   }
 
-  if (command) {
-    await sendMessage(
-      message.chat.id,
-      "✨ <b>Dink Promotion</b>\nChoose what you need below.",
-      mainReplyKeyboard(),
-    );
-    return;
-  }
-
   await sendMessage(
     message.chat.id,
     "✨ <b>Dink Promotion</b>\nChoose what you need below.",
@@ -221,6 +224,7 @@ async function configureBot() {
     commands: [
       { command: "start", description: "✨ Open Dink Promotion" },
       { command: "services", description: "🚀 Browse services" },
+      { command: "offers", description: "🔥 View current offers" },
       { command: "orders", description: "📦 Track orders" },
       { command: "topup", description: "💰 Add funds" },
       { command: "wallet", description: "👛 View wallet" },
@@ -234,7 +238,7 @@ async function configureBot() {
   });
 
   await safeConfigure("setMyDescription", {
-    description: "✨ Dink Promotion\n🚀 Promotion services in ETB\n💰 Top up your wallet\n📦 Track every order",
+    description: "✨ Dink Promotion\n🚀 Promotion services in ETB\n🔥 Automatic offers\n💰 Top up your wallet\n📦 Track every order",
   });
 
   await telegram("setChatMenuButton", {
