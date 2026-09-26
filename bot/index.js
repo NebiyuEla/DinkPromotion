@@ -30,7 +30,15 @@ async function telegram(method, payload = {}) {
   return body.result;
 }
 
-function miniAppKeyboard(label = "Open Dink Promotion") {
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function miniAppKeyboard(label = "🚀 Open Dink Promotion") {
   return {
     inline_keyboard: [[
       {
@@ -41,31 +49,92 @@ function miniAppKeyboard(label = "Open Dink Promotion") {
   };
 }
 
-async function sendOpen(chatId, text, label) {
+function mainReplyKeyboard() {
+  return {
+    keyboard: [
+      [{ text: "🚀 Open Dink Promotion", web_app: { url: appUrl } }],
+      [{ text: "💰 Top Up" }, { text: "📦 Orders" }],
+      [{ text: "👛 Wallet" }, { text: "🛟 Support" }],
+    ],
+    resize_keyboard: true,
+    is_persistent: true,
+    input_field_placeholder: "Choose an option…",
+  };
+}
+
+async function sendMessage(chatId, text, replyMarkup) {
   await telegram("sendMessage", {
     chat_id: chatId,
     text,
     parse_mode: "HTML",
     disable_web_page_preview: true,
-    reply_markup: miniAppKeyboard(label),
+    reply_markup: replyMarkup,
   });
 }
 
+async function sendOpen(chatId, text, label) {
+  await sendMessage(chatId, text, miniAppKeyboard(label));
+}
+
 async function sendWelcome(chatId, firstName) {
-  const name = typeof firstName === "string" && firstName.trim() ? firstName.trim() : "there";
+  const name = firstName && String(firstName).trim() ? ` ${escapeHtml(String(firstName).trim())}` : "";
+  await sendMessage(
+    chatId,
+    `👋 Hi${name}!\n\n✨ <b>Dink Promotion</b>\nPromote, top up, and track orders in one place.`,
+    mainReplyKeyboard(),
+  );
+}
+
+async function sendServices(chatId) {
   await sendOpen(
     chatId,
-    `<b>Dink Promotion</b>\n\nHi ${name}. Choose a service, pay in ETB, and track it from one place.`,
-    "Open Mini App",
+    "🚀 <b>Services</b>\nBrowse promotion services with ETB pricing.",
+    "🚀 Browse services",
+  );
+}
+
+async function sendOrders(chatId) {
+  await sendOpen(
+    chatId,
+    "📦 <b>My orders</b>\nTrack paid orders and their latest status.",
+    "📦 View orders",
+  );
+}
+
+async function sendTopUp(chatId) {
+  await sendOpen(
+    chatId,
+    "💰 <b>Top up</b>\nAdd funds to your Dink balance with Telebirr or CBE Birr.",
+    "💳 Add funds",
+  );
+}
+
+async function sendWallet(chatId) {
+  await sendOpen(
+    chatId,
+    "👛 <b>Wallet</b>\nView your balance, top-ups, refunds, and transactions.",
+    "👛 Open wallet",
+  );
+}
+
+async function sendSupport(chatId) {
+  await sendOpen(
+    chatId,
+    "🛟 <b>Support</b>\nGet help with an order, payment, or account.",
+    "🛟 Get support",
   );
 }
 
 async function sendHelp(chatId) {
-  await sendOpen(
+  await sendMessage(
     chatId,
-    "<b>Need help?</b>\n\nOpen the Mini App and go to Profile → Support.",
-    "Open Mini App",
+    "❓ <b>Help</b>\n\n🚀 /services — Browse services\n📦 /orders — Track orders\n💰 /topup — Add funds\n👛 /wallet — View wallet\n🛟 /support — Get help",
+    mainReplyKeyboard(),
   );
+}
+
+function normalizeText(text) {
+  return String(text || "").trim().toLowerCase();
 }
 
 async function handleUpdate(update) {
@@ -73,30 +142,75 @@ async function handleUpdate(update) {
   if (!message?.chat?.id || message.chat.type !== "private") return;
 
   const text = typeof message.text === "string" ? message.text.trim() : "";
-  const command = text.split(/\s+/, 1)[0].split("@", 1)[0].toLowerCase();
+  if (!text) return;
 
-  if (command === "/start") {
+  const normalized = normalizeText(text);
+  const command = normalized.startsWith("/")
+    ? normalized.split(/\s+/, 1)[0].split("@", 1)[0]
+    : "";
+
+  if (command === "/start" || command === "/menu") {
     await sendWelcome(message.chat.id, message.from?.first_name);
     return;
   }
-  if (command === "/services") {
-    await sendOpen(message.chat.id, "<b>Services</b>\n\nBrowse current services and ETB prices.", "Browse services");
+  if (command === "/services" || normalized === "services" || normalized === "🚀 services") {
+    await sendServices(message.chat.id);
     return;
   }
-  if (command === "/orders") {
-    await sendOpen(message.chat.id, "<b>Orders</b>\n\nSee your paid orders and latest status.", "View orders");
+  if (command === "/orders" || normalized === "orders" || normalized === "📦 orders") {
+    await sendOrders(message.chat.id);
     return;
   }
-  if (command === "/balance") {
-    await sendOpen(message.chat.id, "<b>Wallet</b>\n\nCheck your Dink balance and transactions.", "View wallet");
+  if (
+    command === "/topup" ||
+    command === "/top_up" ||
+    normalized === "topup" ||
+    normalized === "top up" ||
+    normalized === "💰 top up"
+  ) {
+    await sendTopUp(message.chat.id);
     return;
   }
-  if (command === "/support") {
-    await sendOpen(message.chat.id, "<b>Support</b>\n\nOpen the Mini App for order or payment help.", "Get support");
+  if (
+    command === "/wallet" ||
+    command === "/balance" ||
+    normalized === "wallet" ||
+    normalized === "balance" ||
+    normalized === "👛 wallet"
+  ) {
+    await sendWallet(message.chat.id);
     return;
   }
-  if (command === "/help") {
+  if (command === "/support" || normalized === "support" || normalized === "🛟 support") {
+    await sendSupport(message.chat.id);
+    return;
+  }
+  if (command === "/help" || normalized === "help" || normalized === "❓ help") {
     await sendHelp(message.chat.id);
+    return;
+  }
+
+  if (command) {
+    await sendMessage(
+      message.chat.id,
+      "✨ <b>Dink Promotion</b>\nChoose what you need below.",
+      mainReplyKeyboard(),
+    );
+    return;
+  }
+
+  await sendMessage(
+    message.chat.id,
+    "✨ <b>Dink Promotion</b>\nChoose what you need below.",
+    mainReplyKeyboard(),
+  );
+}
+
+async function safeConfigure(method, payload) {
+  try {
+    await telegram(method, payload);
+  } catch (error) {
+    console.warn(`${method} skipped:`, error instanceof Error ? error.message : error);
   }
 }
 
@@ -105,19 +219,28 @@ async function configureBot() {
 
   await telegram("setMyCommands", {
     commands: [
-      { command: "start", description: "Open Dink Promotion" },
-      { command: "services", description: "Browse services" },
-      { command: "orders", description: "View orders" },
-      { command: "balance", description: "View wallet" },
-      { command: "support", description: "Contact support" },
-      { command: "help", description: "Get help" },
+      { command: "start", description: "✨ Open Dink Promotion" },
+      { command: "services", description: "🚀 Browse services" },
+      { command: "orders", description: "📦 Track orders" },
+      { command: "topup", description: "💰 Add funds" },
+      { command: "wallet", description: "👛 View wallet" },
+      { command: "support", description: "🛟 Get support" },
+      { command: "help", description: "❓ Help" },
     ],
+  });
+
+  await safeConfigure("setMyShortDescription", {
+    short_description: "🚀 Promote • 💰 Top up • 📦 Track orders",
+  });
+
+  await safeConfigure("setMyDescription", {
+    description: "✨ Dink Promotion\n🚀 Promotion services in ETB\n💰 Top up your wallet\n📦 Track every order",
   });
 
   await telegram("setChatMenuButton", {
     menu_button: {
       type: "web_app",
-      text: "Open Dink Promotion",
+      text: "🚀 Open Dink Promotion",
       web_app: { url: appUrl },
     },
   });
