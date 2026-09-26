@@ -3,7 +3,7 @@ import { verifyChapaTransaction } from "./chapa";
 import { prisma } from "./db";
 import { applySuccessfulChapaPayment } from "./orders";
 
-const TERMINAL_FAILURES = new Set(["failed", "cancelled", "canceled"]);
+const TERMINAL_FAILURES = new Set(["failed", "cancelled", "canceled", "failed/cancelled"]);
 
 export async function reconcilePendingPayments(limit = 50) {
   const payments = await prisma.payment.findMany({
@@ -31,7 +31,7 @@ export async function reconcilePendingPayments(limit = 50) {
       } else if (TERMINAL_FAILURES.has(status)) {
         const result = await prisma.payment.updateMany({
           where: { id: payment.id, status: PaymentStatus.PENDING },
-          data: { status: PaymentStatus.FAILED },
+          data: { status: PaymentStatus.FAILED, verifiedAt: new Date() },
         });
         failed += result.count;
       } else {
