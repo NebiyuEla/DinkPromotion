@@ -18,8 +18,10 @@ function appButton() {
 
 async function sendTelegram(telegramId: string, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
-  if (!token || !/^\d{3,20}$/.test(telegramId)) return;
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN is missing from the web app environment");
+  if (!/^\d{3,20}$/.test(telegramId)) throw new Error(`Invalid Telegram chat ID: ${telegramId || "empty"}`);
 
+  const markup = appButton();
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -28,14 +30,14 @@ async function sendTelegram(telegramId: string, text: string) {
       text,
       parse_mode: "HTML",
       disable_web_page_preview: true,
-      ...(appButton() ? { reply_markup: appButton() } : {}),
+      ...(markup ? { reply_markup: markup } : {}),
     }),
     signal: AbortSignal.timeout(7_000),
   });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Telegram notification failed (${response.status}): ${body.slice(0, 240)}`);
+  const body = await response.json().catch(() => null) as { ok?: boolean; description?: string } | null;
+  if (!response.ok || !body?.ok) {
+    throw new Error(`Telegram notification failed (${response.status}): ${body?.description || "Unknown Telegram error"}`);
   }
 }
 
@@ -44,7 +46,7 @@ export function queueTelegramNotification(label: string, task: () => Promise<voi
     try {
       await task();
     } catch (error) {
-      console.warn(`Telegram notification skipped: ${label}`, error);
+      console.warn(`Telegram notification failed: ${label}`, error);
     }
   };
 
@@ -53,6 +55,13 @@ export function queueTelegramNotification(label: string, task: () => Promise<voi
   } catch {
     void run();
   }
+}
+
+export async function sendTelegramTestNotification(telegramId: string) {
+  await sendTelegram(
+    telegramId,
+    "✅ <b>Dink Promotion notifications are working</b>\n\nThis test confirms the web app can reach your Telegram account through the bot.",
+  );
 }
 
 export async function notifyPaymentSucceeded(paymentId: string) {
@@ -105,7 +114,7 @@ export async function notifyPaymentFailed(paymentId: string) {
     payment.user.telegramId,
     order
       ? `❌ <b>Payment was not completed</b>\n\nOrder: <b>${escapeHtml(order.publicId)}</b>\nService: ${escapeHtml(order.service.displayName)}\nYou can safely try the payment again.`
-      : `❌ <b>Payment was not completed</b>\n\nYou can safely try again from the Mini App.`,
+      : "❌ <b>Payment was not completed</b>\n\nYou can safely try again from the Mini App.",
   );
 }
 
