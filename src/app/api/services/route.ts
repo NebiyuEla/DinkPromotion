@@ -70,7 +70,6 @@ export async function GET(request: NextRequest) {
     const discounted = discountedServicePrice(service.pricePerThousandMinor, service.platform, discounts);
     return {
       ...serialized,
-      category: detectCategory(service.providerName, service.providerCategory),
       pricePerThousandMinor: discounted.priceMinor,
       originalPricePerThousandMinor: service.pricePerThousandMinor,
       discountPercent: discounted.percent,

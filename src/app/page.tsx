@@ -1,13 +1,5 @@
-import { LocalizedMiniAppV2 } from "@/components/LocalizedMiniAppV2";
-import { PaymentFeeEnhancer } from "@/components/PaymentFeeEnhancer";
-import { ServiceFavorites } from "@/components/ServiceFavorites";
+import { LocalizedMiniApp } from "@/components/LocalizedMiniApp";
 
 export default function Page() {
-  return (
-    <>
-      <LocalizedMiniAppV2 />
-      <PaymentFeeEnhancer />
-      <ServiceFavorites />
-    </>
-  );
+  return <LocalizedMiniApp />;
 }

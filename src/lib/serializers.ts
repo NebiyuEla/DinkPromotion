@@ -64,6 +64,7 @@ export function serializeService(service: Service) {
     action: service.category,
     category: serviceType,
     serviceType,
+    type: serviceType,
     providerType: service.providerType,
     providerCategory: service.providerCategory,
     minQuantity: service.minQuantity,

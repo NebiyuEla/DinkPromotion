@@ -11,8 +11,7 @@ import "./mobile.css";
 import "./interaction-fixes.css";
 import "./preferences.css";
 import "./checkout-fee.css";
-import "./ui-fixes.css";
-import "./miniapp-final-fixes.css";
+import "./ui-v3.css";
 
 export const metadata: Metadata = {
   title: "Dink Promotion",
@@ -29,8 +28,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f8f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d110f" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1210" },
   ],
 };
 
