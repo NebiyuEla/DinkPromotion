@@ -27,7 +27,7 @@ type TelegramBody = {
 };
 
 type ImageUpload = {
-  bytes: Uint8Array;
+  bytes: ArrayBuffer;
   mime: "image/jpeg" | "image/png" | "image/webp";
   filename: string;
 };
@@ -53,7 +53,8 @@ function decodeImage(dataUrl: string): ImageUpload | null {
   if (buffer.length > MAX_IMAGE_BYTES) throw new Error("Image must be 2.5 MB or smaller.");
 
   const extension = mime === "image/jpeg" ? "jpg" : mime === "image/png" ? "png" : "webp";
-  return { bytes: new Uint8Array(buffer), mime, filename: `dink-promotion-broadcast.${extension}` };
+  const bytes = Uint8Array.from(buffer).buffer as ArrayBuffer;
+  return { bytes, mime, filename: `dink-promotion-broadcast.${extension}` };
 }
 
 function classifyTelegramFailure(status: number, description: string): DeliveryResult | null {
