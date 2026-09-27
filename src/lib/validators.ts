@@ -3,7 +3,9 @@ import { z } from "zod";
 export const createOrderSchema = z.object({
   serviceId: z.string().min(1),
   link: z.string().url().max(2048),
-  quantity: z.number().int().positive().max(10_000_000),
+  // Service-specific min/max remains authoritative in the order route. Keep this
+  // transport guard aligned with PostgreSQL Int and the largest PRM4U ranges.
+  quantity: z.number().int().positive().max(2_147_483_647),
 });
 
 export const payOrderSchema = z.object({
@@ -12,7 +14,7 @@ export const payOrderSchema = z.object({
 });
 
 export const walletTopUpSchema = z.object({
-  amountMinor: z.number().int().min(1000).max(10_000_000),
+  amountMinor: z.number().int().min(1000).max(5_000_000),
   method: z.enum(["telebirr", "cbebirr"]),
   mobile: z.string().trim().max(32),
   requestId: z.string().uuid(),

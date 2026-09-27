@@ -1,7 +1,7 @@
 import { PaymentKind, PaymentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { assertChapaConfigured, initiateDirectCharge, normalizeEthiopianMobile } from "@/lib/chapa";
+import { assertChapaConfigured, assertDirectChargeAmount, initiateDirectCharge, normalizeEthiopianMobile } from "@/lib/chapa";
 import { prisma } from "@/lib/db";
 import { AppError, jsonError } from "@/lib/http";
 import { newPaymentRef, payOrderFromWallet } from "@/lib/orders";
@@ -10,10 +10,16 @@ import { serializeOrder } from "@/lib/serializers";
 import { payOrderSchema } from "@/lib/validators";
 
 async function rememberPaymentMobile(userId: string, mobile: string) {
-  await prisma.user.updateMany({
-    where: { id: userId, paymentMobile: null },
-    data: { paymentMobile: mobile },
-  });
+  try {
+    await prisma.user.updateMany({
+      where: { id: userId, paymentMobile: null },
+      data: { paymentMobile: mobile },
+    });
+  } catch (error) {
+    // The payment request may already be on the customer's phone. A profile
+    // convenience write must never make that successful initiation look failed.
+    console.warn("Could not remember payment mobile after order charge initiation", error);
+  }
 }
 
 async function startDirectPayment(input: {
@@ -35,7 +41,7 @@ async function startDirectPayment(input: {
       lastName: input.lastName,
     });
   } catch (error) {
-    if (error instanceof AppError && error.code === "CHAPA_DIRECT_CHARGE_FAILED") {
+    if (error instanceof AppError && error.code === "CHAPA_DIRECT_CHARGE_REJECTED") {
       await prisma.payment.updateMany({
         where: { id: input.paymentId, status: PaymentStatus.PENDING },
         data: { status: PaymentStatus.FAILED },
@@ -55,6 +61,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       include: { service: true, payment: true },
     });
     if (!order) throw new AppError("Order not found", 404, "ORDER_NOT_FOUND");
+
+    if (
+      !order.service.active ||
+      !order.service.compatible ||
+      order.quantity < order.service.minQuantity ||
+      order.quantity > order.service.maxQuantity
+    ) {
+      throw new AppError(
+        "This service changed before payment. Choose the service again to continue.",
+        409,
+        "SERVICE_CHANGED",
+      );
+    }
 
     if (method === "wallet") {
       if (order.payment?.status === PaymentStatus.PENDING) {
@@ -83,6 +102,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (!mobile) throw new AppError("Enter your mobile number", 400, "MOBILE_REQUIRED");
     const normalizedMobile = normalizeEthiopianMobile(mobile);
     assertChapaConfigured();
+    const chargeAmountMinor = directPaymentTotalMinor(order.amountMinor);
+    // Validate before creating or re-arming a Payment row. That prevents an
+    // unsupported amount from being left behind as a fake PENDING payment.
+    assertDirectChargeAmount(method, chargeAmountMinor);
 
     if (order.payment?.status === PaymentStatus.FAILED) {
       const retryTxRef = newPaymentRef("ORDER");
@@ -90,6 +113,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         where: { id: order.payment.id, status: PaymentStatus.FAILED },
         data: {
           txRef: retryTxRef,
+          amountMinor: chargeAmountMinor,
           status: PaymentStatus.PENDING,
           checkoutUrl: null,
           chapaRef: null,
@@ -104,17 +128,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       const result = await startDirectPayment({
         paymentId: order.payment.id,
         txRef: retryTxRef,
-        amountMinor: order.payment.amountMinor,
+        amountMinor: chargeAmountMinor,
         mobile: normalizedMobile,
         method,
         firstName: user.firstName,
         lastName: user.lastName,
       });
       await rememberPaymentMobile(user.id, normalizedMobile);
-      return NextResponse.json({ ...result, amountMinor: order.payment.amountMinor });
+      return NextResponse.json({ ...result, amountMinor: chargeAmountMinor });
     }
 
-    const chargeAmountMinor = directPaymentTotalMinor(order.amountMinor);
     const payment = await prisma.payment.create({
       data: {
         txRef: newPaymentRef("ORDER"),

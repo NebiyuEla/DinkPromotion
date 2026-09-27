@@ -1,4 +1,4 @@
-import { PaymentStatus } from "@prisma/client";
+import { OrderStatus, PaymentKind, PaymentStatus, type Order, type Payment } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { localMobile, requireBotRequest, syncBotUser } from "@/lib/bot-api";
@@ -12,17 +12,28 @@ const profileSchema = z.object({
   lastName: z.string().max(120).nullish(),
   username: z.string().max(120).nullish(),
   languageCode: z.string().max(12).nullish(),
-  view: z.enum(["all", "profile", "wallet", "orders", "offers", "topup", "support"]).optional().default("all"),
+  view: z.enum(["all", "home", "profile", "wallet", "orders", "offers", "topup", "support"]).optional().default("all"),
   syncOrders: z.boolean().optional().default(false),
 });
 
 const orderWhere = (userId: string) => ({
   userId,
   OR: [
-    { status: { not: "AWAITING_PAYMENT" as const } },
-    { payment: { is: { status: { in: [PaymentStatus.PENDING, PaymentStatus.SUCCESS] } } } },
+    { status: { not: OrderStatus.AWAITING_PAYMENT } },
+    { payment: { isNot: null } },
   ],
 });
+
+function botOrderStatus(order: Pick<Order, "status"> & { payment?: Pick<Payment, "status"> | null }) {
+  if (order.status === OrderStatus.AWAITING_PAYMENT && order.payment?.status === PaymentStatus.FAILED) {
+    return OrderStatus.FAILED;
+  }
+  return order.status;
+}
+
+function isTerminalOrderStatus(status: OrderStatus) {
+  return status === OrderStatus.COMPLETED || status === OrderStatus.CANCELED || status === OrderStatus.FAILED;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,6 +65,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(base);
     }
 
+    if (profile.view === "home") {
+      const [wallet, activeOrders] = await Promise.all([
+        prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
+        prisma.order.count({
+          where: {
+            userId: user.id,
+            OR: [
+              { status: { in: [OrderStatus.PAID, OrderStatus.QUEUED, OrderStatus.PENDING, OrderStatus.PROCESSING, OrderStatus.IN_PROGRESS, OrderStatus.PARTIAL, OrderStatus.PROVIDER_ERROR, OrderStatus.PROVIDER_REVIEW] } },
+              { status: OrderStatus.AWAITING_PAYMENT, payment: { is: { status: PaymentStatus.PENDING } } },
+            ],
+          },
+        }),
+      ]);
+      return NextResponse.json({ ...base, balanceMinor: wallet.balanceMinor, activeOrders });
+    }
+
     if (profile.view === "wallet") {
       const [wallet, transactions] = await Promise.all([
         prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
@@ -72,8 +99,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (profile.view === "topup") {
-      const wallet = await prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } });
-      return NextResponse.json({ ...base, balanceMinor: wallet.balanceMinor });
+      const [wallet, pendingTopUp] = await Promise.all([
+        prisma.walletAccount.findUniqueOrThrow({ where: { userId: user.id } }),
+        prisma.payment.findFirst({
+          where: { userId: user.id, kind: PaymentKind.WALLET_TOPUP, status: PaymentStatus.PENDING },
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
+      return NextResponse.json({
+        ...base,
+        balanceMinor: wallet.balanceMinor,
+        pendingTopUp: pendingTopUp
+          ? { txRef: pendingTopUp.txRef, amountMinor: pendingTopUp.amountMinor, createdAt: pendingTopUp.createdAt.toISOString() }
+          : null,
+      });
     }
 
     if (profile.view === "orders") {
@@ -83,7 +122,8 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: 5,
       });
-      const activeOrders = orders.filter((order) => !["COMPLETED", "CANCELED", "FAILED"].includes(order.status)).length;
+      const statuses = orders.map(botOrderStatus);
+      const activeOrders = statuses.filter((status) => !isTerminalOrderStatus(status)).length;
       return NextResponse.json({
         ...base,
         activeOrders,
@@ -93,7 +133,7 @@ export async function POST(request: NextRequest) {
           platform: order.service.platform,
           quantity: order.quantity,
           amountMinor: order.amountMinor,
-          status: order.status,
+          status: botOrderStatus(order),
           paymentStatus: order.payment?.status || null,
           createdAt: order.createdAt.toISOString(),
         })),
@@ -122,12 +162,12 @@ export async function POST(request: NextRequest) {
       }),
       prisma.discountRule.findMany({ where: { active: true, percent: { gt: 0 } }, orderBy: { scope: "asc" } }),
       prisma.payment.findFirst({
-        where: { userId: user.id, kind: "WALLET_TOPUP", status: PaymentStatus.PENDING },
+        where: { userId: user.id, kind: PaymentKind.WALLET_TOPUP, status: PaymentStatus.PENDING },
         orderBy: { createdAt: "desc" },
       }),
     ]);
 
-    const activeOrders = orders.filter((order) => !["COMPLETED", "CANCELED", "FAILED"].includes(order.status)).length;
+    const activeOrders = orders.map(botOrderStatus).filter((status) => !isTerminalOrderStatus(status)).length;
 
     return NextResponse.json({
       ...base,
@@ -139,7 +179,7 @@ export async function POST(request: NextRequest) {
         platform: order.service.platform,
         quantity: order.quantity,
         amountMinor: order.amountMinor,
-        status: order.status,
+        status: botOrderStatus(order),
         paymentStatus: order.payment?.status || null,
         createdAt: order.createdAt.toISOString(),
       })),

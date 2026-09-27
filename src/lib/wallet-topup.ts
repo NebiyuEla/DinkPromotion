@@ -5,10 +5,16 @@ import { AppError } from "./http";
 import { newPaymentRef } from "./orders";
 
 async function rememberPaymentMobile(userId: string, mobile: string) {
-  await prisma.user.updateMany({
-    where: { id: userId, paymentMobile: null },
-    data: { paymentMobile: mobile },
-  });
+  try {
+    await prisma.user.updateMany({
+      where: { id: userId, paymentMobile: null },
+      data: { paymentMobile: mobile },
+    });
+  } catch (error) {
+    // A Chapa charge may already be awaiting approval. Never turn a successful
+    // initiation into an API error just because this convenience write failed.
+    console.warn("Could not remember payment mobile after wallet charge initiation", error);
+  }
 }
 
 async function startWalletCharge(input: {
@@ -30,7 +36,7 @@ async function startWalletCharge(input: {
       lastName: input.lastName,
     });
   } catch (error) {
-    if (error instanceof AppError && error.code === "CHAPA_DIRECT_CHARGE_FAILED") {
+    if (error instanceof AppError && error.code === "CHAPA_DIRECT_CHARGE_REJECTED") {
       await prisma.payment.updateMany({
         where: { id: input.paymentId, status: PaymentStatus.PENDING },
         data: { status: PaymentStatus.FAILED },

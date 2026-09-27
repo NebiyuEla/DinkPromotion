@@ -1,3 +1,4 @@
+import { OrderStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -15,7 +16,9 @@ export async function GET() {
     const activeServices = await prisma.service.count({ where: { active: true, compatible: true } });
     const orders = await prisma.order.count();
     const revenue = await prisma.order.aggregate({
-      where: { status: { not: "AWAITING_PAYMENT" } },
+      // Cancelled orders are refunded to wallet and failed/unpaid orders are not
+      // revenue. Provider review/error remains included because the user paid.
+      where: { status: { notIn: [OrderStatus.AWAITING_PAYMENT, OrderStatus.CANCELED, OrderStatus.FAILED] } },
       _sum: { amountMinor: true },
     });
     const latest = await prisma.order.findMany({

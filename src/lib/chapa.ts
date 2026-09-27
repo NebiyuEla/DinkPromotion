@@ -5,6 +5,41 @@ const API_BASE = "https://api.chapa.co/v1";
 
 export type DirectMethod = "telebirr" | "cbebirr";
 
+function positiveEtbEnv(name: string, fallbackEtb: number) {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallbackEtb;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : fallbackEtb;
+}
+
+export function directChargeLimits(method: DirectMethod) {
+  const minEtb = positiveEtbEnv("CHAPA_DIRECT_MIN_ETB", 1);
+  const maxEtb = method === "telebirr"
+    ? positiveEtbEnv("CHAPA_TELEBIRR_MAX_ETB", 75_000)
+    : positiveEtbEnv("CHAPA_CBEBIRR_MAX_ETB", 150_000);
+  return {
+    minMinor: Math.round(minEtb * 100),
+    maxMinor: Math.round(maxEtb * 100),
+  };
+}
+
+export function assertDirectChargeAmount(method: DirectMethod, amountMinor: number) {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
+    throw new AppError("Invalid payment amount", 400, "INVALID_PAYMENT_AMOUNT");
+  }
+  const limits = directChargeLimits(method);
+  if (amountMinor < limits.minMinor || amountMinor > limits.maxMinor) {
+    const min = (limits.minMinor / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
+    const max = (limits.maxMinor / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
+    const label = method === "telebirr" ? "Telebirr" : "CBE Birr";
+    throw new AppError(
+      `${label} payments must be between ${min} and ${max} ETB`,
+      409,
+      "DIRECT_PAYMENT_AMOUNT_OUT_OF_RANGE",
+    );
+  }
+}
+
 export function normalizeEthiopianMobile(value: string) {
   const digits = value.replace(/[\s-]/g, "").replace(/^\+/, "");
   if (/^0[79]\d{8}$/.test(digits)) return `251${digits.slice(1)}`;
@@ -20,6 +55,7 @@ export async function initiateDirectCharge(input: {
   firstName: string;
   lastName?: string | null;
 }) {
+  assertDirectChargeAmount(input.method, input.amountMinor);
   const form = new FormData();
   form.set("amount", (input.amountMinor / 100).toFixed(2));
   form.set("currency", "ETB");
@@ -37,7 +73,17 @@ export async function initiateDirectCharge(input: {
   });
   const payload = (await response.json().catch(() => null)) as { status?: string; message?: string } | null;
   if (!response.ok || payload?.status?.toLowerCase() !== "success") {
-    throw new AppError(payload?.message || "Payment request could not be started. Check the order before trying again.", 502, "CHAPA_DIRECT_CHARGE_FAILED");
+    // 5xx/timeout/rate-limit responses are ambiguous: the provider may have
+    // accepted the reference even though our response was lost. Keep the local
+    // payment pending and verify the same tx_ref rather than creating a duplicate.
+    const uncertain = response.status >= 500 || response.status === 408 || response.status === 429;
+    throw new AppError(
+      payload?.message || (uncertain
+        ? "Payment request status is uncertain. Check the payment before trying again."
+        : "Payment request was rejected."),
+      uncertain ? 502 : 409,
+      uncertain ? "CHAPA_DIRECT_CHARGE_UNCERTAIN" : "CHAPA_DIRECT_CHARGE_REJECTED",
+    );
   }
   // A successful initiation is only an authorization request. Fulfillment happens
   // after transaction verification confirms the exact amount and reference.

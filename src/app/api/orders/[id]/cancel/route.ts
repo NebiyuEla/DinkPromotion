@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AppError, jsonError } from "@/lib/http";
 import { refundOrderToWalletOnce } from "@/lib/orders";
-import { cancelPrmOrder } from "@/lib/prm4u";
+import { cancelPrmOrder, PRM4UError } from "@/lib/prm4u";
 
 export async function POST(_: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -16,9 +16,8 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
     });
     if (!order) throw new AppError("Order not found", 404, "ORDER_NOT_FOUND");
 
-    // If the provider cancellation was already committed locally but a later
-    // wallet-credit write failed, a retry must recover the refund instead of
-    // rejecting the request because the order is no longer PENDING.
+    // If provider cancellation was committed locally but a later wallet-credit
+    // write failed, a retry recovers the refund without calling the provider again.
     if (order.status === OrderStatus.CANCELED && order.cancelRequestedAt) {
       await refundOrderToWalletOnce(order.id, `Refund for cancelled ${order.publicId}`);
       return NextResponse.json({ ok: true, refund: "wallet" });
@@ -30,11 +29,46 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
     if (order.status !== OrderStatus.PENDING) {
       throw new AppError("Only provider-pending orders can be cancelled", 409, "CANCEL_NOT_AVAILABLE");
     }
+    if (order.cancelRequestedAt) {
+      throw new AppError(
+        "Cancellation is already being checked. Refresh the order before trying again.",
+        409,
+        "CANCEL_REVIEW_REQUIRED",
+      );
+    }
 
-    await cancelPrmOrder(order.providerOrderId);
+    const requestedAt = new Date();
+    const claimed = await prisma.order.updateMany({
+      where: { id: order.id, status: OrderStatus.PENDING, cancelRequestedAt: null },
+      data: { cancelRequestedAt: requestedAt },
+    });
+    if (claimed.count === 0) {
+      throw new AppError("Cancellation is already being processed", 409, "CANCEL_IN_PROGRESS");
+    }
+
+    try {
+      await cancelPrmOrder(order.providerOrderId);
+    } catch (error) {
+      const definitive = error instanceof PRM4UError && error.definitive;
+      if (definitive) {
+        await prisma.order.updateMany({
+          where: { id: order.id, status: OrderStatus.PENDING, cancelRequestedAt: requestedAt },
+          data: { cancelRequestedAt: null },
+        });
+        throw error;
+      }
+      // An unknown network response may have reached the provider. Keep the claim
+      // in place and let status sync reconcile it rather than risk a double cancel.
+      throw new AppError(
+        "Cancellation status is uncertain. Refresh the order before taking another action.",
+        409,
+        "CANCEL_REVIEW_REQUIRED",
+      );
+    }
+
     await prisma.order.update({
       where: { id: order.id },
-      data: { status: OrderStatus.CANCELED, cancelRequestedAt: new Date(), providerStatusRaw: "Canceled" },
+      data: { status: OrderStatus.CANCELED, providerStatusRaw: "Canceled" },
     });
     await refundOrderToWalletOnce(order.id, `Refund for cancelled ${order.publicId}`);
     return NextResponse.json({ ok: true, refund: "wallet" });

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AppError, jsonError } from "@/lib/http";
-import { requestPrmRefill } from "@/lib/prm4u";
+import { PRM4UError, requestPrmRefill } from "@/lib/prm4u";
 
 export async function POST(_: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -23,12 +23,40 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
       throw new AppError("A refill request has already been submitted for this order", 409, "REFILL_ALREADY_REQUESTED");
     }
 
-    const refillId = await requestPrmRefill(order.providerOrderId);
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { refillId, refillStatus: "Requested" },
+    // Claim the refill before touching the provider. This blocks double taps and
+    // concurrent requests from creating multiple provider refill requests.
+    const claimed = await prisma.order.updateMany({
+      where: { id: order.id, refillId: null, refillStatus: null },
+      data: { refillStatus: "Requesting" },
     });
-    return NextResponse.json({ refillId, status: "Requested" });
+    if (claimed.count === 0) {
+      throw new AppError("A refill request is already being processed", 409, "REFILL_ALREADY_REQUESTED");
+    }
+
+    try {
+      const refillId = await requestPrmRefill(order.providerOrderId);
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { refillId, refillStatus: "Requested" },
+      });
+      return NextResponse.json({ refillId, status: "Requested" });
+    } catch (error) {
+      // A network/unknown response may have reached PRM4U. Do not automatically
+      // unlock it for a retry because that could create a duplicate refill.
+      const definitive = error instanceof PRM4UError && error.definitive;
+      await prisma.order.updateMany({
+        where: { id: order.id, refillId: null, refillStatus: "Requesting" },
+        data: { refillStatus: definitive ? "Rejected" : "Under review" },
+      });
+      if (!definitive) {
+        throw new AppError(
+          "Refill status is uncertain and has been sent for review. Do not submit it again.",
+          409,
+          "REFILL_REVIEW_REQUIRED",
+        );
+      }
+      throw error;
+    }
   } catch (error) {
     return jsonError(error);
   }
