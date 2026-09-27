@@ -104,8 +104,9 @@ function menu() {
   };
 }
 
-const appButton = (label = TEXT.open) => ({ text: label, web_app: { url: appUrl } });
+const appButton = (label = TEXT.open, url = appUrl) => ({ text: label, web_app: { url } });
 const topupButton = () => ({ text: TEXT.topup, callback_data: "topup:start" });
+const favoritesUrl = `${appUrl}?favorites=1`;
 
 function statusLabel(status) {
   return ({
@@ -131,12 +132,8 @@ async function welcome(message) {
 
 async function showFavorites(id) {
   clearFlow(id);
-  return send(id, "⭐ <b>Favorites</b>\n\nQuick access to the things you use most.", {
-    inline_keyboard: [
-      [appButton("🚀 Services")],
-      [{ text: TEXT.orders, callback_data: "quick:orders" }, { text: TEXT.wallet, callback_data: "quick:wallet" }],
-      [{ text: TEXT.topup, callback_data: "topup:start" }, { text: TEXT.offers, callback_data: "quick:offers" }],
-    ],
+  return send(id, "⭐ <b>Saved services</b>\n\nOpen the Mini App to view and order the services you saved.", {
+    inline_keyboard: [[appButton("⭐ Open saved services", favoritesUrl)]],
   });
 }
 
@@ -325,7 +322,7 @@ async function onMessage(message) {
   if (["/topup", "/top_up"].includes(cmd) || matches(value, ["topup", "top up", "💰 top up"])) return topStart(id, message.from);
   if (cmd === "/help" || value === "help") {
     clearFlow(id);
-    return send(id, "❓ <b>Help</b>\n\n⭐ /favorites — Quick access\n🚀 /services — Browse services\n📦 /orders — View orders\n👛 /wallet — View wallet\n💰 /topup — Top up wallet\n🔥 /offers — View offers\n🛟 /support — Get support", menu());
+    return send(id, "❓ <b>Help</b>\n\n⭐ /favorites — Open saved services\n🚀 /services — Browse services\n📦 /orders — View orders\n👛 /wallet — View wallet\n💰 /topup — Top up wallet\n🔥 /offers — View offers\n🛟 /support — Get support", menu());
   }
 
   const flow = flows.get(String(id));
@@ -401,7 +398,7 @@ async function configure() {
   await tg("deleteWebhook", { drop_pending_updates: false });
   await tg("setMyCommands", { commands: [
     { command: "start", description: "Open menu" },
-    { command: "favorites", description: "Quick access" },
+    { command: "favorites", description: "Open saved services" },
     { command: "services", description: "Browse services" },
     { command: "orders", description: "View orders" },
     { command: "wallet", description: "View wallet" },
