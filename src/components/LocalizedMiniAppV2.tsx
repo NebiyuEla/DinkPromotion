@@ -15,6 +15,7 @@ const AM: Record<string, string> = {
   Offline: "ከመስመር ውጭ",
   Home: "መነሻ",
   Services: "አገልግሎቶች",
+  "Service details": "የአገልግሎት ዝርዝር",
   Orders: "ትዕዛዞች",
   Wallet: "ዋሌት",
   Profile: "መገለጫ",
