@@ -12,6 +12,7 @@ import "./interaction-fixes.css";
 import "./preferences.css";
 import "./checkout-fee.css";
 import "./ui-v3.css";
+import "./ux-hardening.css";
 
 export const metadata: Metadata = {
   title: "Dink Promotion",
