@@ -1,6 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { discountedServicePrice, getDiscountMap } from "@/lib/discounts";
+import { detectPlatform } from "@/lib/prm4u";
 import { serializeService } from "@/lib/serializers";
 import { isPrmCatalogStale, syncPrmServices } from "@/lib/service-sync";
 
@@ -11,6 +12,11 @@ function customerMinimumLimit(category: string) {
   if (["Comments", "Poll Votes", "Retweets"].includes(category)) return 100;
   if (["Likes", "Reactions", "Shares", "Saves"].includes(category)) return 500;
   return 1000;
+}
+
+function hasProviderPlatformConflict(service: { platform: string; providerCategory: string }) {
+  const providerPlatform = detectPlatform("", service.providerCategory || "");
+  return providerPlatform !== "Other" && providerPlatform !== service.platform;
 }
 
 export async function GET(request: NextRequest) {
@@ -39,6 +45,7 @@ export async function GET(request: NextRequest) {
                 { displayName: { contains: search, mode: "insensitive" } },
                 { platform: { contains: search, mode: "insensitive" } },
                 { category: { contains: search, mode: "insensitive" } },
+                { providerCategory: { contains: search, mode: "insensitive" } },
               ],
             }
           : {}),
@@ -49,10 +56,12 @@ export async function GET(request: NextRequest) {
     getDiscountMap(),
   ]);
 
-  // Provider panels sometimes expose wholesale-only minimums that are technically
-  // orderable but make no sense in a consumer Mini App. Keep those rows available
-  // to admins while preventing impractical quantities from reaching customers.
-  const visibleServices = services.filter((service) => service.minQuantity <= customerMinimumLimit(service.category));
+  // Provider panels sometimes expose wholesale-only minimums or inconsistent
+  // metadata. Keep those rows visible to admins, but never show a YouTube-tagged
+  // provider category as TikTok/Instagram (or another conflicting platform) to a customer.
+  const visibleServices = services.filter(
+    (service) => service.minQuantity <= customerMinimumLimit(service.category) && !hasProviderPlatformConflict(service),
+  );
 
   const customerServices = visibleServices.map((service) => {
     const serialized = serializeService(service);

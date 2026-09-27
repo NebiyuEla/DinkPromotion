@@ -28,31 +28,58 @@ export function requireBotRequest(request: NextRequest) {
 export async function syncBotUser(profile: BotProfile) {
   const telegramId = String(profile.telegramId || "").trim();
   if (!/^\d{3,20}$/.test(telegramId)) throw new AppError("Invalid Telegram account", 400, "INVALID_TELEGRAM_ID");
+
   const firstName = String(profile.firstName || "").trim().slice(0, 120) || "Telegram User";
+  const lastName = profile.lastName?.trim().slice(0, 120) || null;
+  const username = profile.username?.trim().slice(0, 120) || null;
   const languageCode = profile.languageCode?.trim().slice(0, 12) || null;
   const admin = isTelegramAdmin(telegramId);
 
-  const user = await prisma.user.upsert({
+  const existing = await prisma.user.findUnique({
     where: { telegramId },
-    create: {
-      telegramId,
-      firstName,
-      lastName: profile.lastName?.trim().slice(0, 120) || null,
-      username: profile.username?.trim().slice(0, 120) || null,
-      languageCode,
-      isAdmin: admin,
-      wallet: { create: {} },
-    },
-    update: {
-      firstName,
-      lastName: profile.lastName?.trim().slice(0, 120) || null,
-      username: profile.username?.trim().slice(0, 120) || null,
-      ...(languageCode ? { languageCode } : {}),
-      isAdmin: admin,
-    },
+    include: { wallet: { select: { id: true } } },
   });
 
-  await prisma.walletAccount.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} });
+  if (!existing) {
+    return prisma.user.create({
+      data: {
+        telegramId,
+        firstName,
+        lastName,
+        username,
+        languageCode,
+        isAdmin: admin,
+        wallet: { create: {} },
+      },
+    });
+  }
+
+  const needsProfileUpdate =
+    existing.firstName !== firstName ||
+    existing.lastName !== lastName ||
+    existing.username !== username ||
+    existing.isAdmin !== admin ||
+    Boolean(languageCode && existing.languageCode !== languageCode);
+
+  const user = needsProfileUpdate
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          firstName,
+          lastName,
+          username,
+          ...(languageCode ? { languageCode } : {}),
+          isAdmin: admin,
+        },
+      })
+    : existing;
+
+  // Existing users normally already have a wallet. Avoid an unconditional upsert
+  // on every bot button press; only repair the relation if it is actually missing.
+  if (!existing.wallet) {
+    await prisma.walletAccount.upsert({ where: { userId: existing.id }, create: { userId: existing.id }, update: {} });
+  }
+
   return user;
 }
 

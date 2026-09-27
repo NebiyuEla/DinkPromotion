@@ -5,6 +5,37 @@ function localPaymentMobile(value: string | null) {
   return /^251[79]\d{8}$/.test(value) ? `0${value.slice(3)}` : value;
 }
 
+function cleanServiceType(value: string) {
+  return value
+    .replace(/\s*\/\s*/g, " / ")
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function providerServiceType(service: Service) {
+  const providerCategory = String(service.providerCategory || "").trim();
+  const bracketMatches = [...providerCategory.matchAll(/\[([^\]]+)\]/g)];
+  const bracketType = cleanServiceType(bracketMatches.at(-1)?.[1] || "");
+  if (bracketType) return bracketType;
+
+  const categoryParts = providerCategory.split(/\s+-\s+/).map((part) => part.trim()).filter(Boolean);
+  const categoryType = cleanServiceType(categoryParts.length > 1 ? categoryParts.slice(1).join(" - ") : "");
+  if (categoryType) return categoryType;
+
+  const rawType = cleanServiceType(String(service.providerType || ""));
+  if (rawType && rawType.toLowerCase() !== "default") return rawType;
+  return service.category;
+}
+
+function customerServiceName(service: Service, serviceType: string) {
+  const platform = service.platform.replace(" / Twitter", "");
+  const action = service.category;
+  const base = `${platform} ${action}`.trim();
+  if (!serviceType || serviceType.toLowerCase() === action.toLowerCase()) return base;
+  return `${base} — ${serviceType}`;
+}
+
 export function serializeUser(user: User) {
   return {
     id: user.id,
@@ -20,14 +51,19 @@ export function serializeUser(user: User) {
 }
 
 export function serializeService(service: Service) {
+  const serviceType = providerServiceType(service);
   return {
     id: service.id,
-    name: service.displayName,
+    name: customerServiceName(service, serviceType),
     description: service.description,
     platform: service.platform,
-    // `category` is Dink's customer-facing action classification (Views, Likes,
-    // Followers, etc.). Keep PRM4U's transport/order type available separately.
-    category: service.category,
+    // `action` is Dink's normalized action (Followers, Views, Likes, etc.).
+    // `category` / `serviceType` are the meaningful PRM4U subtype shown to customers.
+    // PRM4U's transport type is preserved separately as `providerType` because
+    // the orderable catalog currently uses Default transport services.
+    action: service.category,
+    category: serviceType,
+    serviceType,
     providerType: service.providerType,
     providerCategory: service.providerCategory,
     minQuantity: service.minQuantity,
