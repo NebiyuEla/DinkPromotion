@@ -1,0 +1,173 @@
+/* Final Mini App interaction polish. Keep this file last so it only sharpens V3 behavior. */
+
+/* Saved/favorite control: center the star independently of the count badge. */
+.mini-app-v3 .v3-saved-button {
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(15, 28, 21, 0.05);
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 90ms ease;
+}
+
+.mini-app-v3 .v3-saved-button > svg,
+.mini-app-v3 .v3-detail-saved > svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.mini-app-v3 .v3-saved-button > span {
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.mini-app-v3 .v3-saved-button.active,
+.mini-app-v3 .v3-detail-saved.active {
+  background: var(--v3-brand-soft);
+}
+
+/* Controls should visually behave like controls, without adding noisy decoration. */
+.mini-app-v3 :where(
+  .v3-pref-button,
+  .v3-icon-button,
+  .v3-saved-button,
+  .v3-detail-saved,
+  .v3-platform-card,
+  .v3-platform-filter button,
+  .v3-filter-heading button,
+  .v3-type-trigger,
+  .v3-type-menu button,
+  .v3-service-row,
+  .v3-order-row,
+  .v3-menu-card:not(.static),
+  .v3-pending-row,
+  .v3-direct-method,
+  .v3-primary,
+  .v3-secondary,
+  .v3-danger,
+  .v3-wallet-pay,
+  .v3-nav-button
+) {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mini-app-v3 :where(
+  .v3-pref-button,
+  .v3-icon-button,
+  .v3-saved-button,
+  .v3-detail-saved,
+  .v3-platform-card,
+  .v3-platform-filter button,
+  .v3-type-trigger,
+  .v3-type-menu button,
+  .v3-service-row,
+  .v3-order-row,
+  .v3-menu-card:not(.static),
+  .v3-pending-row,
+  .v3-direct-method,
+  .v3-primary,
+  .v3-secondary,
+  .v3-danger,
+  .v3-wallet-pay,
+  .v3-nav-button
+):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--v3-brand) 34%, transparent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mini-app-v3 :where(
+    .v3-pref-button,
+    .v3-icon-button,
+    .v3-saved-button,
+    .v3-detail-saved,
+    .v3-platform-filter button,
+    .v3-type-trigger,
+    .v3-type-menu button,
+    .v3-secondary,
+    .v3-wallet-pay
+  ):not(:disabled):hover {
+    border-color: var(--v3-line-strong);
+    background: var(--v3-surface-2);
+  }
+
+  .mini-app-v3 :where(
+    .v3-platform-card,
+    .v3-service-row,
+    .v3-order-row,
+    .v3-menu-card:not(.static),
+    .v3-pending-row,
+    .v3-direct-method
+  ):not(:disabled):hover {
+    border-color: var(--v3-line-strong);
+    box-shadow: 0 7px 18px rgba(18, 42, 28, 0.07);
+  }
+
+  .mini-app-v3 .v3-primary:not(:disabled):hover {
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--v3-brand) 22%, transparent);
+  }
+}
+
+.mini-app-v3 :where(
+  .v3-pref-button,
+  .v3-icon-button,
+  .v3-saved-button,
+  .v3-detail-saved,
+  .v3-platform-card,
+  .v3-platform-filter button,
+  .v3-filter-heading button,
+  .v3-type-trigger,
+  .v3-type-menu button,
+  .v3-service-row,
+  .v3-order-row,
+  .v3-menu-card:not(.static),
+  .v3-pending-row,
+  .v3-direct-method,
+  .v3-primary,
+  .v3-secondary,
+  .v3-danger,
+  .v3-wallet-pay,
+  .v3-nav-button
+):not(:disabled):active {
+  transform: scale(0.975) !important;
+  opacity: 0.9;
+}
+
+.mini-app-v3 button:disabled {
+  cursor: not-allowed;
+}
+
+/* Guidance text must remain visually secondary to entered values. */
+.mini-app-v3 input::placeholder,
+.mini-app-v3 textarea::placeholder {
+  color: var(--v3-muted) !important;
+  -webkit-text-fill-color: var(--v3-muted) !important;
+  font-weight: 500 !important;
+  opacity: 0.72 !important;
+}
+
+/* Keep dense rows visually even and remove accidental extra vertical air. */
+.mini-app-v3 .v3-catalog-tools {
+  align-items: stretch;
+}
+
+.mini-app-v3 .v3-service-row,
+.mini-app-v3 .v3-order-row,
+.mini-app-v3 .v3-menu-card,
+.mini-app-v3 .v3-pending-row {
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease, transform 90ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mini-app-v3 *,
+  .mini-app-v3 *::before,
+  .mini-app-v3 *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
