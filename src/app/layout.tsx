@@ -14,12 +14,13 @@ import "./checkout-fee.css";
 import "./ui-v3.css";
 import "./ux-hardening.css";
 import "./customer-motion.css";
+import "./notice-swipe.css";
 
 export const metadata: Metadata = {
   title: "Dink Promotion",
   description: "Fast, simple social media promotion inside Telegram.",
   icons: {
-    icon: [{ url: "/dink-promotion-mark.png", type: "image/png", sizes: "120x120" }],
+    icon: [{ url: "/dink-promotion-mark.png", type: "image/png", sizes: "512x512" }],
     apple: "/dink-promotion-mark.png",
   },
 };
