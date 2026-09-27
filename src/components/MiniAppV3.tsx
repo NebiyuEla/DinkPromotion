@@ -1241,16 +1241,8 @@ function HomeView({ c, user, authState, featured, servicesState, hasServices, re
   return (
     <>
       <AppTop {...top} title="Dink Promotion" subtitle={user ? `${top.language === "am" ? "ሰላም" : "Hi"}, ${user.firstName}` : undefined} />
-      <section className="v3-hero">
-        <p className="v3-eyebrow">{c.heroKicker}</p>
-        <h1>{c.heroTitle}</h1>
-        <p>{c.heroCopy}</p>
-        <button type="button" className="v3-primary" onClick={() => openServices()}>{c.browseServices}</button>
-        {authState === "telegram-required" && <span className="v3-hero-note"><LogIn size={15} /> {c.openTelegramOrder}</span>}
-      </section>
-
       <section className="v3-section">
-        <SectionHeader title={c.platforms} />
+        <SectionHeader title={c.platforms} action={c.seeAll} onAction={() => openServices()} />
         <div className="v3-platform-grid">
           {PLATFORM_ORDER.slice(1).map((name) => (
             <button type="button" className="v3-platform-card" key={name} onClick={() => openServices(name)}>
@@ -1259,6 +1251,7 @@ function HomeView({ c, user, authState, featured, servicesState, hasServices, re
             </button>
           ))}
         </div>
+        {authState === "telegram-required" && <span className="v3-hero-note"><LogIn size={15} /> {c.openTelegramOrder}</span>}
       </section>
 
       <section className="v3-section">
@@ -1305,11 +1298,12 @@ function ServicesView({ c, language, services, total, servicesState, retryServic
           <Search size={19} />
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={c.search} autoCapitalize="none" autoCorrect="off" />
         </label>
-        <button type="button" className={`v3-saved-button ${savedOnly ? "active" : ""}`} aria-pressed={savedOnly} onClick={() => { setSavedOnly(!savedOnly); setPlatform("All"); setSearch(""); setServiceType("All"); }}><Star size={17} fill={savedOnly ? "currentColor" : "none"} /> {c.saved}{savedCount ? ` · ${number(savedCount)}` : ""}</button>
+        <button type="button" className={`v3-saved-button ${savedOnly ? "active" : ""}`} aria-label={`${c.saved}${savedCount ? ` (${number(savedCount)})` : ""}`} title={c.saved} aria-pressed={savedOnly} onClick={() => { setSavedOnly(!savedOnly); setPlatform("All"); setSearch(""); setServiceType("All"); }}><Star size={20} fill={savedOnly ? "currentColor" : "none"} />{savedCount > 0 && <span>{number(savedCount)}</span>}</button>
       </div>
 
+      <div className="v3-filter-heading"><strong>{c.platforms}</strong><button type="button" className={platform === "All" ? "active" : ""} aria-pressed={platform === "All"} onClick={() => { setPlatform("All"); setTypesOpen(false); }}>{c.all}</button></div>
       <div className="v3-platform-filter" aria-label={c.platforms}>
-        {PLATFORM_ORDER.map((item) => (
+        {PLATFORM_ORDER.slice(1).map((item) => (
           <button
             type="button"
             key={item}
