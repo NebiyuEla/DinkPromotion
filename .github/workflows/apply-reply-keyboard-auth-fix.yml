@@ -1,0 +1,41 @@
+name: Apply reply keyboard auth launch fix
+on:
+  push:
+    branches:
+      - fix/reply-keyboard-auth-launch
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/reply-keyboard-auth-launch
+          fetch-depth: 0
+      - name: Patch bot launch behavior
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('bot/index.js')
+          s = p.read_text()
+          old = '      [{ text: TEXT.open, web_app: { url: appUrl } }],\n'
+          new = '      [{ text: TEXT.open }],\n'
+          if old not in s:
+              raise SystemExit('menu web_app row not found')
+          s = s.replace(old, new, 1)
+          needle = '  if (["/start", "/menu"].includes(cmd)) return welcome(message);\n'
+          insert = '''  if (["/start", "/menu"].includes(cmd)) return welcome(message);\n  if (matches(value, ["open app", "🚀 open app"])) {\n    clearFlow(id);\n    return send(id, "🚀 <b>Open Dink Promotion</b>\\n\\nTap the button below to continue securely in Telegram.", {\n      inline_keyboard: [[appButton("🚀 Open Dink Promotion")]],\n    });\n  }\n'''
+          if needle not in s:
+              raise SystemExit('onMessage start handler not found')
+          s = s.replace(needle, insert, 1)
+          p.write_text(s)
+          PY
+      - name: Remove one-time workflow and commit
+        run: |
+          rm .github/workflows/apply-reply-keyboard-auth-fix.yml
+          git config user.name "Dink Promotion CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add bot/index.js .github/workflows/apply-reply-keyboard-auth-fix.yml
+          git commit -m "Route reply keyboard app launch through authenticated inline Web App"
+          git push origin HEAD:fix/reply-keyboard-auth-launch
