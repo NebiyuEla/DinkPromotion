@@ -1,5 +1,5 @@
+/* eslint-disable @next/next/no-sync-scripts */
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/600.css";
@@ -50,14 +50,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script src="https://telegram.org/js/telegram-web-app.js" />
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <link rel="preload" href="/dink-promotion-mark.png" as="image" />
         <link rel="preload" href="/dink-promotion-logo.png" as="image" />
       </head>
-      <body>
-        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
