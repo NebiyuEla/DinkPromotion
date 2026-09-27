@@ -24,3 +24,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+      - name: Package Discloud bot
+        run: zip -r DinkPromotion-Discloud.zip discloud.config bot
+      - name: Upload Discloud bot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DinkPromotion-Discloud
+          path: DinkPromotion-Discloud.zip
+          if-no-files-found: error
+          retention-days: 7

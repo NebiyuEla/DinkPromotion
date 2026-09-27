@@ -3,6 +3,7 @@ import { OrderStatus, PaymentKind, PaymentStatus, WalletTransactionType } from "
 import { prisma } from "./db";
 import { AppError } from "./http";
 import { addPrmOrder, getPrmStatuses, normalizeProviderStatus, PRM4UError } from "./prm4u";
+import { notifyOrderStatusChanged, notifyPaymentSucceeded, queueTelegramNotification } from "./telegram-notify";
 import type { VerifiedChapa } from "./chapa";
 
 export function newPublicOrderId() {
@@ -143,6 +144,10 @@ export async function applySuccessfulChapaPayment(verified: VerifiedChapa) {
       console.error("Order fulfillment failed after verified payment", error);
     }
   }
+
+  if (!result.alreadyProcessed) {
+    queueTelegramNotification(`payment-success:${payment.id}`, () => notifyPaymentSucceeded(payment.id));
+  }
   return result;
 }
 
@@ -158,8 +163,6 @@ export async function payOrderFromWallet(orderId: string, userId: string) {
     const existing = await tx.walletTransaction.findUnique({ where: { reference } });
     if (existing) return;
 
-    // Do the balance check and decrement in one row-locked UPDATE. Two orders
-    // paid at the same time can no longer both read the same balance and spend it.
     const debited = await tx.walletAccount.updateMany({
       where: { userId, balanceMinor: { gte: order.amountMinor } },
       data: { balanceMinor: { decrement: order.amountMinor } },
@@ -196,6 +199,10 @@ export async function syncOpenProviderOrders(userId?: string) {
       providerOrderId: { not: null },
       status: { in: [OrderStatus.PENDING, OrderStatus.PROCESSING, OrderStatus.IN_PROGRESS, OrderStatus.PARTIAL] },
     },
+    include: {
+      user: { select: { telegramId: true } },
+      service: { select: { displayName: true } },
+    },
     orderBy: { updatedAt: "asc" },
     take: 100,
   });
@@ -209,25 +216,43 @@ export async function syncOpenProviderOrders(userId?: string) {
     const status = statuses[providerId];
     if (!status || status.error) continue;
     const mapped = normalizeProviderStatus(status.status);
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: mapped,
-        providerStatusRaw: status.status,
-        providerChargeUsd: status.charge,
-        startCount: status.start_count,
-        remains: status.remains,
-        completedAt: mapped === OrderStatus.COMPLETED ? new Date() : order.completedAt,
-      },
-    });
-    if (mapped === OrderStatus.CANCELED) {
+    const data = {
+      status: mapped,
+      providerStatusRaw: status.status,
+      providerChargeUsd: status.charge,
+      startCount: status.start_count,
+      remains: status.remains,
+      completedAt: mapped === OrderStatus.COMPLETED ? new Date() : order.completedAt,
+    };
+
+    let transitionApplied = false;
+    if (mapped !== order.status) {
+      const changed = await prisma.order.updateMany({
+        where: { id: order.id, status: order.status },
+        data,
+      });
+      transitionApplied = changed.count > 0;
+      if (!transitionApplied) continue;
+    } else {
+      await prisma.order.update({ where: { id: order.id }, data });
+    }
+
+    if (mapped === OrderStatus.CANCELED && transitionApplied) {
       try {
         await refundOrderToWalletOnce(order.id, `Refund for cancelled ${order.publicId}`);
       } catch (error) {
-        // The status is still authoritative. The unique refund reference makes a
-        // later sync/retry safe if the wallet write is temporarily unavailable.
         console.error("Could not apply provider cancellation refund", error);
       }
+    }
+
+    if (transitionApplied) {
+      queueTelegramNotification(`order-status:${order.id}:${mapped}`, () => notifyOrderStatusChanged({
+        telegramId: order.user.telegramId,
+        publicId: order.publicId,
+        serviceName: order.service.displayName,
+        status: mapped,
+        remains: status.remains,
+      }));
     }
     updated += 1;
   }

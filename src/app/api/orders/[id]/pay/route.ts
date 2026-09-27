@@ -16,8 +16,6 @@ async function rememberPaymentMobile(userId: string, mobile: string) {
       data: { paymentMobile: mobile },
     });
   } catch (error) {
-    // The payment request may already be on the customer's phone. A profile
-    // convenience write must never make that successful initiation look failed.
     console.warn("Could not remember payment mobile after order charge initiation", error);
   }
 }
@@ -103,8 +101,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const normalizedMobile = normalizeEthiopianMobile(mobile);
     assertChapaConfigured();
     const chargeAmountMinor = directPaymentTotalMinor(order.amountMinor);
-    // Validate before creating or re-arming a Payment row. That prevents an
-    // unsupported amount from being left behind as a fake PENDING payment.
     assertDirectChargeAmount(method, chargeAmountMinor);
 
     if (order.payment?.status === PaymentStatus.FAILED) {
@@ -125,16 +121,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         const current = await prisma.payment.findUniqueOrThrow({ where: { id: order.payment.id } });
         return NextResponse.json({ status: current.status.toLowerCase(), txRef: current.txRef, checkoutUrl: current.checkoutUrl, amountMinor: current.amountMinor });
       }
-      const result = await startDirectPayment({
-        paymentId: order.payment.id,
-        txRef: retryTxRef,
-        amountMinor: chargeAmountMinor,
-        mobile: normalizedMobile,
-        method,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      });
-      await rememberPaymentMobile(user.id, normalizedMobile);
+      const [result] = await Promise.all([
+        startDirectPayment({
+          paymentId: order.payment.id,
+          txRef: retryTxRef,
+          amountMinor: chargeAmountMinor,
+          mobile: normalizedMobile,
+          method,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        }),
+        rememberPaymentMobile(user.id, normalizedMobile),
+      ]);
       return NextResponse.json({ ...result, amountMinor: chargeAmountMinor });
     }
 
@@ -147,16 +145,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         amountMinor: chargeAmountMinor,
       },
     });
-    const result = await startDirectPayment({
-      paymentId: payment.id,
-      txRef: payment.txRef,
-      amountMinor: payment.amountMinor,
-      mobile: normalizedMobile,
-      method,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    });
-    await rememberPaymentMobile(user.id, normalizedMobile);
+    const [result] = await Promise.all([
+      startDirectPayment({
+        paymentId: payment.id,
+        txRef: payment.txRef,
+        amountMinor: payment.amountMinor,
+        mobile: normalizedMobile,
+        method,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      }),
+      rememberPaymentMobile(user.id, normalizedMobile),
+    ]);
     return NextResponse.json({ ...result, amountMinor: payment.amountMinor });
   } catch (error) {
     return jsonError(error);

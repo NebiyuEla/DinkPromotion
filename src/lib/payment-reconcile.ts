@@ -2,6 +2,7 @@ import { PaymentStatus } from "@prisma/client";
 import { verifyChapaTransaction } from "./chapa";
 import { prisma } from "./db";
 import { applySuccessfulChapaPayment } from "./orders";
+import { notifyPaymentFailed, queueTelegramNotification } from "./telegram-notify";
 
 const TERMINAL_FAILURES = new Set(["failed", "cancelled", "canceled", "failed/cancelled"]);
 
@@ -9,8 +10,7 @@ export async function reconcilePendingPayments(limit = 50) {
   const payments = await prisma.payment.findMany({
     where: {
       status: PaymentStatus.PENDING,
-      // Give a newly created direct-charge request a short window before polling.
-      createdAt: { lt: new Date(Date.now() - 10_000) },
+      createdAt: { lt: new Date(Date.now() - 3_000) },
     },
     orderBy: { createdAt: "asc" },
     take: Math.min(Math.max(limit, 1), 100),
@@ -33,13 +33,14 @@ export async function reconcilePendingPayments(limit = 50) {
           where: { id: payment.id, status: PaymentStatus.PENDING },
           data: { status: PaymentStatus.FAILED, verifiedAt: new Date() },
         });
+        if (result.count) {
+          queueTelegramNotification(`payment-failed:${payment.id}`, () => notifyPaymentFailed(payment.id));
+        }
         failed += result.count;
       } else {
         pending += 1;
       }
     } catch (error) {
-      // A verifier/provider outage must never turn a potentially successful
-      // payment into a failure. It remains pending for the next reconciliation.
       errors += 1;
       console.warn(`Pending payment reconciliation failed for ${payment.txRef}`, error);
     }

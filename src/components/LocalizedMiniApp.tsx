@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LiveSync } from "./LiveSync";
 import { MiniAppRuntimePolish } from "./MiniAppRuntimePolish";
 import { MiniAppV3, type MiniAppLanguage, type MiniAppTheme } from "./MiniAppV3";
 
@@ -59,6 +60,7 @@ export function LocalizedMiniApp() {
         onToggleLanguage={() => setLanguage((current) => current === "en" ? "am" : "en")}
         onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
+      <LiveSync />
       <MiniAppRuntimePolish />
     </div>
   );
