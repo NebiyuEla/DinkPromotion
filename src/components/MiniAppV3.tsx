@@ -21,6 +21,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Star,
   Settings2,
   ShieldCheck,
   ShoppingBag,
@@ -121,6 +122,8 @@ const PLATFORM_ORDER = ["All", "Instagram", "TikTok", "YouTube", "Telegram", "Fa
 const ROOT_TABS: View[] = ["home", "services", "orders", "wallet", "profile"];
 const SERVICE_CACHE_KEY = "dink-promotion-service-cache-v4";
 const SERVICE_CACHE_TTL = 10 * 60 * 1000;
+const FAVORITES_KEY = "dink-promotion-favorite-service-ids-v1";
+const LEGACY_FAVORITES_KEY = "dink-promotion-favorite-services-v1";
 const PAGE_SIZE = 60;
 
 const COPY = {
@@ -138,7 +141,9 @@ const COPY = {
     browseServices: "Browse services",
     openTelegramOrder: "Open from Telegram to order",
     platforms: "Platforms",
-    popular: "Popular",
+    popular: "Explore services",
+    saved: "Saved",
+    serviceDetails: "Service details",
     seeAll: "See all",
     noServices: "No services yet",
     checkBack: "Check back shortly.",
@@ -269,7 +274,9 @@ const COPY = {
     browseServices: "አገልግሎቶችን ይመልከቱ",
     openTelegramOrder: "ለማዘዝ በTelegram ይክፈቱ",
     platforms: "ፕላትፎርሞች",
-    popular: "ተወዳጅ",
+    popular: "አገልግሎቶችን ይመልከቱ",
+    saved: "የተቀመጡ",
+    serviceDetails: "የአገልግሎት ዝርዝር",
     seeAll: "ሁሉን ይመልከቱ",
     noServices: "እስካሁን አገልግሎት የለም",
     checkBack: "ትንሽ ቆይተው ይመለሱ።",
@@ -484,6 +491,8 @@ export function MiniAppV3({ language, theme, onToggleLanguage, onToggleTheme }: 
   const [online, setOnline] = useState(true);
   const [message, setMessage] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
   const [search, setSearch] = useState("");
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [savedOnly, setSavedOnly] = useState(false);
   const deferredSearch = useDeferredValue(search);
   const [platform, setPlatform] = useState("All");
   const [serviceType, setServiceType] = useState("All");
@@ -495,6 +504,7 @@ export function MiniAppV3({ language, theme, onToggleLanguage, onToggleTheme }: 
   const [paymentFeePercent, setPaymentFeePercent] = useState(2.875);
   const topUpRequestRef = useRef<string | null>(null);
   const lastPrivateRefreshRef = useRef(0);
+  const favoritesLoadedRef = useRef(false);
 
   const showMessage = useCallback((text: string, tone: "success" | "error" | "info" = "info") => {
     setMessage({ text, tone });
@@ -615,6 +625,34 @@ export function MiniAppV3({ language, theme, onToggleLanguage, onToggleTheme }: 
     return () => window.removeEventListener("focus", onFocus);
   }, [loadPrivate, user]);
 
+  useEffect(() => {
+    if (!services.length || favoritesLoadedRef.current) return;
+    favoritesLoadedRef.current = true;
+    try {
+      const stored = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as unknown;
+      if (Array.isArray(stored)) {
+        const ids = stored.filter((id): id is string => typeof id === "string" && services.some((service) => service.id === id));
+        if (ids.length || localStorage.getItem(FAVORITES_KEY) !== null) { setSavedIds(ids); return; }
+      }
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_FAVORITES_KEY) || "[]") as Array<{ key?: string; name?: string; platform?: string; price?: string }>;
+      if (Array.isArray(legacy)) {
+        const ids = services.filter((service) => legacy.some((item) => item.key === `service:${service.id}` || (
+          item.name === service.name && item.platform === service.platform && item.price === money(service.pricePerThousandMinor)
+        ))).map((service) => service.id);
+        setSavedIds(ids);
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
+      }
+    } catch { setSavedIds([]); }
+  }, [services]);
+
+  function toggleSaved(id: string) {
+    setSavedIds((current) => {
+      const next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
+      try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(next)); } catch { /* Local storage is optional. */ }
+      return next;
+    });
+  }
+
   const platformServices = useMemo(
     () => platform === "All" ? services : services.filter((service) => service.platform === platform),
     [platform, services],
@@ -636,11 +674,12 @@ export function MiniAppV3({ language, theme, onToggleLanguage, onToggleTheme }: 
   const visibleServices = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
     return platformServices.filter((service) => {
+      if (savedOnly && !savedIds.includes(service.id)) return false;
       if (serviceType !== "All" && (service.type || "Default") !== serviceType) return false;
       if (!needle) return true;
       return `${service.name} ${service.platform} ${service.category} ${service.type}`.toLowerCase().includes(needle);
     });
-  }, [deferredSearch, platformServices, serviceType]);
+  }, [deferredSearch, platformServices, savedIds, savedOnly, serviceType]);
 
   const renderedServices = useMemo(() => visibleServices.slice(0, renderLimit), [renderLimit, visibleServices]);
 
@@ -933,6 +972,7 @@ export function MiniAppV3({ language, theme, onToggleLanguage, onToggleTheme }: 
             openService={openService}
             openServices={(selectedPlatform?: string) => {
               setPlatform(selectedPlatform || "All");
+              setSavedOnly(false);
               setServiceType("All");
               setSearch("");
               go("services", "home");
@@ -958,6 +998,9 @@ export function MiniAppV3({ language, theme, onToggleLanguage, onToggleTheme }: 
             setTypesOpen={setTypesOpen}
             search={search}
             setSearch={setSearch}
+            savedOnly={savedOnly}
+            setSavedOnly={setSavedOnly}
+            savedCount={savedIds.length}
             openService={openService}
             showMore={visibleServices.length > renderedServices.length ? () => setRenderLimit((value) => value + PAGE_SIZE) : undefined}
           />
@@ -976,6 +1019,8 @@ export function MiniAppV3({ language, theme, onToggleLanguage, onToggleTheme }: 
             back={() => goRoot(previousView === "home" ? "home" : "services")}
             onSubmit={createOrder}
             busy={busy}
+            saved={savedIds.includes(selectedService.id)}
+            toggleSaved={() => toggleSaved(selectedService.id)}
           />
         )}
 
@@ -1195,7 +1240,7 @@ function HomeView({ c, user, authState, featured, servicesState, hasServices, re
 } & TopProps) {
   return (
     <>
-      <AppTop {...top} title="Dink Promotion" subtitle={user ? `${top.language === "am" ? "ሰላም" : "Hi"}, ${user.firstName}` : c.promotionMadeSimple} />
+      <AppTop {...top} title="Dink Promotion" subtitle={user ? `${top.language === "am" ? "ሰላም" : "Hi"}, ${user.firstName}` : undefined} />
       <section className="v3-hero">
         <p className="v3-eyebrow">{c.heroKicker}</p>
         <h1>{c.heroTitle}</h1>
@@ -1225,7 +1270,7 @@ function HomeView({ c, user, authState, featured, servicesState, hasServices, re
   );
 }
 
-function ServicesView({ c, language, services, total, servicesState, retryServices, platform, setPlatform, serviceType, setServiceType, serviceTypes, typesOpen, setTypesOpen, search, setSearch, openService, showMore, ...top }: {
+function ServicesView({ c, language, services, total, servicesState, retryServices, platform, setPlatform, serviceType, setServiceType, serviceTypes, typesOpen, setTypesOpen, search, setSearch, savedOnly, setSavedOnly, savedCount, openService, showMore, ...top }: {
   c: Copy;
   language: MiniAppLanguage;
   services: Service[];
@@ -1241,6 +1286,9 @@ function ServicesView({ c, language, services, total, servicesState, retryServic
   setTypesOpen: (value: boolean | ((current: boolean) => boolean)) => void;
   search: string;
   setSearch: (value: string) => void;
+  savedOnly: boolean;
+  setSavedOnly: (value: boolean) => void;
+  savedCount: number;
   openService: (service: Service) => void;
   showMore?: () => void;
 } & TopProps) {
@@ -1251,11 +1299,14 @@ function ServicesView({ c, language, services, total, servicesState, retryServic
 
   return (
     <>
-      <AppTop {...top} title={c.services} subtitle={language === "am" ? `${number(total)} አገልግሎቶች` : `${number(total)} available`} />
-      <label className="v3-search-box">
-        <Search size={19} />
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={c.search} autoCapitalize="none" autoCorrect="off" />
-      </label>
+      <AppTop {...top} language={language} title="Dink Promotion" subtitle={language === "am" ? `${c.services} · ${number(total)}` : `${c.services} · ${number(total)} available`} />
+      <div className="v3-catalog-tools">
+        <label className="v3-search-box">
+          <Search size={19} />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={c.search} autoCapitalize="none" autoCorrect="off" />
+        </label>
+        <button type="button" className={`v3-saved-button ${savedOnly ? "active" : ""}`} aria-pressed={savedOnly} onClick={() => { setSavedOnly(!savedOnly); setPlatform("All"); setSearch(""); setServiceType("All"); }}><Star size={17} fill={savedOnly ? "currentColor" : "none"} /> {c.saved}{savedCount ? ` · ${number(savedCount)}` : ""}</button>
+      </div>
 
       <div className="v3-platform-filter" aria-label={c.platforms}>
         {PLATFORM_ORDER.map((item) => (
@@ -1307,7 +1358,7 @@ function ServiceRow({ service, onClick }: { service: Service; onClick: () => voi
       <span className={`v3-service-icon ${platformClass(service.platform)}`}><PlatformIcon platform={service.platform} /></span>
       <span className="v3-service-copy">
         <strong>{service.name}</strong>
-        <small>{service.category} · {number(service.minQuantity)}–{number(service.maxQuantity)}</small>
+        <small>{number(service.minQuantity)}–{number(service.maxQuantity)} {service.type && service.type !== service.category ? `· ${service.type}` : ""}</small>
       </span>
       <span className="v3-service-price">
         {service.discountPercent ? <em>−{service.discountPercent}%</em> : null}
@@ -1319,7 +1370,7 @@ function ServiceRow({ service, onClick }: { service: Service; onClick: () => voi
   );
 }
 
-function ServiceDetail({ c, language, service, quantity, setQuantity, link, setLink, back, onSubmit, busy, ...top }: {
+function ServiceDetail({ c, language, service, quantity, setQuantity, link, setLink, back, onSubmit, busy, saved, toggleSaved, ...top }: {
   c: Copy;
   language: MiniAppLanguage;
   service: Service;
@@ -1330,6 +1381,8 @@ function ServiceDetail({ c, language, service, quantity, setQuantity, link, setL
   back: () => void;
   onSubmit: (event: FormEvent) => void;
   busy: boolean;
+  saved: boolean;
+  toggleSaved: () => void;
 } & TopProps) {
   const parsed = parseDigits(quantity);
   const valid = parsed !== null && parsed >= service.minQuantity && parsed <= service.maxQuantity;
@@ -1359,10 +1412,11 @@ function ServiceDetail({ c, language, service, quantity, setQuantity, link, setL
 
   return (
     <>
-      <AppTop {...top} title={service.platform} subtitle={service.category} back={back} />
+      <AppTop {...top} language={language} title={c.serviceDetails} subtitle={service.platform} back={back} />
       <section className="v3-detail-card v3-service-title-card">
         <span className={`v3-service-icon large ${platformClass(service.platform)}`}><PlatformIcon platform={service.platform} size={30} /></span>
-        <div><h1>{service.name}</h1><p>{money(service.pricePerThousandMinor)} / 1,000</p><span className="v3-type-badge">{c.type}: {service.type || c.noType}</span></div>
+        <div><h1>{service.name}</h1><p>{money(service.pricePerThousandMinor)} / 1,000</p></div>
+        <button type="button" className={`v3-detail-saved ${saved ? "active" : ""}`} onClick={toggleSaved} aria-label={`${saved ? "Remove" : "Save"} ${service.name}`}><Star size={21} fill={saved ? "currentColor" : "none"} /></button>
       </section>
       <form onSubmit={onSubmit} className="v3-order-form">
         <label className="v3-field-label">{c.link}<input type="url" required value={link} onChange={(event) => setLink(event.target.value)} placeholder="https://..." autoCapitalize="none" autoCorrect="off" /></label>
@@ -1457,7 +1511,7 @@ function PaymentPendingView({ c, flow, busy, onCheck, back, ...top }: { c: Copy;
   );
 }
 
-function OrdersView({ c, language, orders, openOrder, refresh, busy, authenticated, authState, authError, statusLabel, ...top }: {
+function OrdersView({ c, orders, openOrder, refresh, busy, authenticated, authState, authError, statusLabel, ...top }: {
   c: Copy;
   language: MiniAppLanguage;
   orders: Order[];
@@ -1505,7 +1559,7 @@ function OrderDetail({ c, language, order, back, refresh, refill, cancel, pay, c
   const canCancel = !!order.service?.cancel && order.status === "PENDING";
   return (
     <>
-      <AppTop {...top} title={c.order} subtitle={order.publicId} back={back} />
+      <AppTop {...top} language={language} title={c.order} subtitle={order.publicId} back={back} />
       <section className="v3-order-detail">
         <div className="v3-order-detail-status"><span className={`v3-status v3-status-${statusTone(order.status)}`}>{statusLabel(order)}</span><span>{formatDate(order.createdAt, language)}</span></div>
         <div className="v3-checkout-service">{order.service && <span className={`v3-service-icon ${platformClass(order.service.platform)}`}><PlatformIcon platform={order.service.platform} /></span>}<span><strong>{order.service?.name || c.promotionService}</strong><small className="v3-truncate">{order.link}</small></span></div>
@@ -1550,7 +1604,7 @@ function WalletView({ c, language, balanceMinor, transactions, pendingPayments, 
   const formattedAmount = amount ? Number(amount.replace(/,/g, "")).toLocaleString("en-US") : "";
   return (
     <>
-      <AppTop {...top} title={c.wallet} subtitle={c.dinkBalance} />
+      <AppTop {...top} language={language} title={c.wallet} subtitle={c.dinkBalance} />
       {!authenticated ? <TelegramRequired c={c} compact state={authState} error={authError} /> : (
         <>
           <section className="v3-wallet-card"><span>{c.balance}</span><strong>{money(balanceMinor)}</strong></section>
