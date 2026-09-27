@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Sun,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Brand } from "./Brand";
 
@@ -21,7 +22,7 @@ type NavItem = {
   label: string;
   heading?: string;
   selector?: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 };
 
 const THEME_KEY = "dink-promotion-theme";
@@ -96,11 +97,11 @@ export function AdminNavigation() {
       </nav>
 
       <div className="admin-nav-footer">
-        <button type="button" onClick={toggleTheme}>
+        <button type="button" onClick={toggleTheme} aria-label={theme === "dark" ? "Use light mode" : "Use dark mode"}>
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
         </button>
-        <button type="button" onClick={() => window.location.assign("/")}>
+        <button type="button" onClick={() => window.location.assign("/")} aria-label="Open Mini App">
           <ArrowLeft size={18} />
           <span>Mini App</span>
         </button>
