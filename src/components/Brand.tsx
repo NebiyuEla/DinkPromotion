@@ -2,10 +2,10 @@ export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? "brand brand-compact" : "brand"}>
       <img
-        src={compact ? "/dink-promotion-mark.png" : "/dink-promotion-logo.png"}
+        src="/dink-promotion-mark.png"
         alt="Dink Promotion"
-        width={compact ? 120 : 620}
-        height={compact ? 120 : 231}
+        width={compact ? 120 : 512}
+        height={compact ? 120 : 512}
         className="brand-logo"
         loading="eager"
         decoding="sync"

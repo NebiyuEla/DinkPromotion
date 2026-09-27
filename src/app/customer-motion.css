@@ -143,6 +143,107 @@
   transform: scale(.96);
 }
 
+.v3-runtime-notice-shell {
+  position: fixed;
+  z-index: 120;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  width: min(calc(100% - 24px), 470px);
+  min-height: 62px;
+  transform: translate3d(-50%, 0, 0);
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid var(--v3-line, #dfe8e2);
+  border-radius: 16px;
+  background: var(--v3-surface, #fff);
+  color: var(--v3-text, #111815);
+  box-shadow: 0 14px 40px rgba(16, 33, 23, .16);
+  touch-action: pan-y;
+  user-select: none;
+  will-change: transform, opacity;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s ease;
+  animation: v3-runtime-notice-in .28s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.v3-runtime-notice-shell.dragging {
+  transition: none;
+}
+
+.v3-runtime-notice-shell.leaving.leave-left {
+  transform: translate3d(calc(-50% - 115vw), 0, 0) !important;
+  opacity: 0 !important;
+}
+
+.v3-runtime-notice-shell.leaving.leave-right {
+  transform: translate3d(calc(-50% + 115vw), 0, 0) !important;
+  opacity: 0 !important;
+}
+
+.v3-runtime-notice-logo,
+.v3-update-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+  background: #fff;
+}
+
+.v3-update-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.v3-runtime-notice-copy {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.v3-runtime-notice-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--v3-muted, #6f7d76);
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.v3-runtime-notice-close:active {
+  background: var(--v3-surface-3, #edf3ef);
+  transform: scale(.96);
+}
+
+.v3-runtime-notice-success {
+  border-color: color-mix(in srgb, var(--v3-brand, #29d63b) 34%, var(--v3-line, #dfe8e2));
+}
+
+.v3-runtime-notice-error {
+  border-color: color-mix(in srgb, var(--v3-danger, #d94047) 38%, var(--v3-line, #dfe8e2));
+}
+
+.v3-runtime-notice-info {
+  border-color: color-mix(in srgb, var(--v3-info, #216cb8) 26%, var(--v3-line, #dfe8e2));
+}
+
+@keyframes v3-runtime-notice-in {
+  from { opacity: 0; transform: translate3d(-50%, -12px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(-50%, 0, 0) scale(1); }
+}
+
 @keyframes v3-toast-in {
   from { opacity: 0; transform: translate(-50%, -10px) scale(.98); }
   to { opacity: 1; transform: translate(-50%, 0) scale(1); }
@@ -178,6 +279,12 @@
   .v3-page-actions > .v3-secondary {
     right: 102px;
   }
+
+  .v3-runtime-notice-shell {
+    width: calc(100% - 20px);
+    grid-template-columns: 36px minmax(0, 1fr) 32px;
+    gap: 8px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -190,13 +297,15 @@
   .v3-pending-row,
   .v3-transaction-row,
   .v3-order-row,
-  .v3-payment-pending::after {
+  .v3-payment-pending::after,
+  .v3-runtime-notice-shell {
     animation: none !important;
   }
 
   .v3-direct-method,
   .v3-pending-row,
-  .v3-page-actions > .v3-secondary {
+  .v3-page-actions > .v3-secondary,
+  .v3-runtime-notice-shell {
     transition: none !important;
   }
 }
