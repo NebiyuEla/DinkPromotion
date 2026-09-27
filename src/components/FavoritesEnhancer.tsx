@@ -87,7 +87,7 @@ function findServiceRow(item: FavoriteService) {
 
 function haptic() {
   try {
-    window.Telegram?.WebApp.HapticFeedback?.selectionChanged?.();
+    window.Telegram?.WebApp.HapticFeedback?.impactOccurred?.("light");
   } catch {}
 }
 
