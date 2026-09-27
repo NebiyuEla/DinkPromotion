@@ -472,8 +472,30 @@ html[data-theme="dark"] .v3-service-icon.platform-x {
 
 .v3-search-box input::placeholder {
   color: var(--v3-muted);
+  -webkit-text-fill-color: var(--v3-muted);
   opacity: 0.85;
 }
+
+.v3-catalog-tools { position: relative; }
+.v3-catalog-tools .v3-search-box { padding-right: 105px; }
+.v3-saved-button {
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid var(--v3-line);
+  border-radius: 11px;
+  background: var(--v3-surface-3);
+  color: var(--v3-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.v3-saved-button.active { color: var(--v3-brand-strong); border-color: var(--v3-brand); }
 
 .v3-platform-filter {
   display: grid;
@@ -722,7 +744,21 @@ html[data-theme="dark"] .v3-service-icon.platform-x {
 
 .v3-service-title-card > div {
   min-width: 0;
+  flex: 1;
 }
+
+.v3-detail-saved {
+  flex: 0 0 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--v3-line);
+  border-radius: 12px;
+  background: var(--v3-surface-3);
+  color: var(--v3-text);
+  cursor: pointer;
+}
+.v3-detail-saved.active { color: var(--v3-brand-strong); border-color: var(--v3-brand); }
 
 .v3-service-title-card h1 {
   margin: 0;
@@ -797,6 +833,7 @@ html[data-theme="dark"] .v3-service-icon.platform-x {
 
 .v3-field-label input::placeholder {
   color: var(--v3-muted);
+  -webkit-text-fill-color: var(--v3-muted);
   opacity: 0.68;
 }
 
