@@ -1,1 +1,296 @@
-InVzZSBjbGllbnQiOwoKaW1wb3J0IHsgTW9vbiwgU3VuIH0gZnJvbSAibHVjaWRlLXJlYWN0IjsKaW1wb3J0IHsgdXNlRWZmZWN0LCB1c2VSZWYsIHVzZVN0YXRlIH0gZnJvbSAicmVhY3QiOwppbXBvcnQgeyBNaW5pQXBwVXhFbmhhbmNlciB9IGZyb20gIi4vTWluaUFwcFV4RW5oYW5jZXIiOwppbXBvcnQgeyBNaW5pQXBwVjIgfSBmcm9tICIuL01pbmlBcHBWMiI7Cgp0eXBlIExhbmd1YWdlID0gImVuIiB8ICJhbSI7CnR5cGUgVGhlbWUgPSAibGlnaHQiIHwgImRhcmsiOwoKY29uc3QgTEFOR1VBR0VfS0VZID0gImRpbmstcHJvbW90aW9uLWxhbmd1YWdlIjsKY29uc3QgVEhFTUVfS0VZID0gImRpbmstcHJvbW90aW9uLXRoZW1lIjsKCmNvbnN0IEFNOiBSZWNvcmQ8c3RyaW5nLCBzdHJpbmc+ID0gewogIE9mZmxpbmU6ICLhiqjhiJjhiLXhiJjhiK0g4YuN4YytIiwKICBIb21lOiAi4YiY4YqQ4Yi7IiwKICBTZXJ2aWNlczogIuGKoOGMiOGIjeGMjeGIjuGJtuGJvSIsCiAgT3JkZXJzOiAi4Ym14YuV4Yub4Yue4Ym9IiwKICBXYWxsZXQ6ICLhi4vhiIzhibUiLAogIFByb2ZpbGU6ICLhiJjhjIjhiIjhjKsiLAogICJEaW5rIGJhbGFuY2UiOiAi4YuoRGluayDhiYDhiKog4YiC4Yiz4YmlIiwKICAiVGVsZWdyYW0gYWNjb3VudCI6ICLhi6hUZWxlZ3JhbSDhiJjhiIjhi6siLAogICJQcm9tb3Rpb24gbWFkZSBzaW1wbGUiOiAi4YmA4YiL4YiNIOGLqOGNleGIruGInuGIveGKlSDhiqDhjIjhiI3hjI3hiI7hibUiLAogICJQcm9tb3RlIGluIGEgZmV3IHRhcHMuIjogIuGJoOGMpeGJguGJtSDhipXhiq3hiqrhi47hib0g4Y2V4Yiu4Yie4Yi94YqVIOGLq+GLteGIreGMieGNoiIsCiAgIkNob29zZSBhIHBsYXRmb3JtLiBQaWNrIGEgc2VydmljZS4gUGF5IGluIEVUQi4iOiAi4Y2V4YiL4Ym14Y2O4Yit4YidIOGLreGIneGIqOGMoeGNoyDhiqDhjIjhiI3hjI3hiI7hibUg4Yut4Yid4Yio4Yyh4Y2jIOGJoOGJpeGIrSDhi63hiq3hjYjhiInhjaIiLAogICJCcm93c2Ugc2VydmljZXMiOiAi4Yqg4YyI4YiN4YyN4YiO4Ym24Ym94YqVIOGLreGImOGIjeGKqOGJsSIsCiAgIk9wZW4gZnJvbSBUZWxlZ3JhbSB0byBvcmRlciI6ICLhiIjhiJvhi5jhi50g4YmgVGVsZWdyYW0g4Yut4Yqt4Y2I4YmxIiwKICBQbGF0Zm9ybXM6ICLhjZXhiIvhibXhjY7hiK3hiJ7hib0iLAogIFBvcHVsYXI6ICLhibDhi4jhi7PhjIUiLAogICJTZWUgYWxsIjogIuGIgeGIieGKlSDhi63hiJjhiI3hiqjhibEiLAogIFNlYXJjaDogIuGNiOGIjeGMjSIsCiAgQWxsOiAi4YiB4YiJ4YidIiwKICBUeXBlOiAi4YuT4Yut4YqQ4Ym1IiwKICAiU2VydmljZSB0eXBlIjogIuGLqOGKoOGMiOGIjeGMjeGIjuGJtSDhi5Phi63hipDhibUiLAogICJFeHBsb3JlIHNlcnZpY2VzIjogIuGKoOGMiOGIjeGMjeGIjuGJtuGJveGKlSDhi63hiJjhiI3hiqjhibEiLAogIExpbms6ICLhiIrhipXhiq0iLAogIFF1YW50aXR5OiAi4Yml4Yub4Ym1IiwKICBUb3RhbDogIuGMoOGJheGIi+GIiyIsCiAgU3VidG90YWw6ICLhi6jhiqDhjIjhiI3hjI3hiI7hibUg4YuL4YyLIiwKICAiUHJvY2Vzc2luZyBmZWUiOiAi4Yuo4Yqt4Y2N4YurIOGKoOGMiOGIjeGMjeGIjuGJtSIsCiAgQ3JlYXRpbmc6ICLhiaDhiJjhjY3hjKDhiK0g4YiL4YutIiwKICBDb250aW51ZTogIuGJgOGMpeGIjSIsCiAgUGF5bWVudDogIuGKreGNjeGLqyIsCiAgIlByb21vdGlvbiBzZXJ2aWNlIjogIuGLqOGNleGIruGInuGIveGKlSDhiqDhjIjhiI3hjI3hiI7hibUiLAogIFBheTogIuGLreGKreGNiOGIiSIsCiAgIk1vYmlsZSBudW1iZXIiOiAi4Yi14YiN4YqtIOGJgeGMpeGIrSIsCiAgIlVzZSB3YWxsZXQgwrciOiAi4YuL4YiM4Ym1IOGLreGMoOGJgOGImSDCtyIsCiAgIkNvbmZpcm0gcGF5bWVudCI6ICLhiq3hjY3hi6vhi43hipUg4Yur4Yio4YyL4YyN4YyhIiwKICAiQXBwcm92ZSB0aGUgcmVxdWVzdCBvbiB5b3VyIHBob25lLiI6ICLhiaDhiLXhiI3hiq3hi44g4Yuo4Yqt4Y2N4YurIOGMpeGLq+GJhOGLjeGKlSDhi6vhiKjhjIvhjI3hjKHhjaIiLAogICJDaGVjayBzdGF0dXMiOiAi4YiB4YqU4Ymz4YqVIOGLq+GIqOGMi+GMjeGMoSIsCiAgIk15IG9yZGVycyI6ICLhibXhi5Xhi5vhi57hibwiLAogICJZb3VyIHB1cmNoYXNlcyI6ICLhi6jhiqXhiK3hiLXhi44g4YyN4Yui4YuO4Ym9IiwKICBSZWZyZXNoOiAi4Yqg4Yu14Yi1IiwKICBPcmRlcjogIuGJteGLleGLm+GLnSIsCiAgU3RhdHVzOiAi4YiB4YqU4YmzIiwKICAiU3RhcnQ6IjogIuGImOGKkOGIu+GNpiIsCiAgIlJlbWFpbmluZzoiOiAi4YmA4Yiq4Y2mIiwKICAiTWFudWFsIHJldmlldyI6ICLhiaDhiqXhjIUg4Yib4Yio4YyL4YyI4YyrIiwKICAiQWRtaW4gcmV2aWV3IGlzIHJlcXVpcmVkLiI6ICLhi6jhiqDhiLXhibDhi7Phi7PhiKog4Yib4Yio4YyL4YyI4YyrIOGLq+GIteGNiOGIjeGMi+GIjeGNoiIsCiAgIlByb3ZpZGVyIGVycm9yIjogIuGLqOGKoOGJheGIq+GJoiDhiLXhiIXhibDhibUiLAogICJBZG1pbiBhdHRlbnRpb24gaXMgcmVxdWlyZWQuIjogIuGLqOGKoOGIteGJsOGLs+GLs+GIqiDhiqXhiK3hiJ3hjIMg4Yur4Yi14Y2I4YiN4YyL4YiN4Y2iIiwKICBDb21wbGV0ZWQ6ICLhibDhjKDhipPhiYvhiI0iLAogICJGaW5pc2hlZC4iOiAi4Ymw4Yyg4YqT4YmL4YiN4Y2iIiwKICAiUGF5bWVudCBwZW5kaW5nIjogIuGKreGNjeGLqyDhiaDhiJjhjKDhiaPhiaDhiYUg4YiL4YutIiwKICAiQ2hlY2sgeW91ciBwaG9uZSBvciByZWZyZXNoLiI6ICLhiLXhiI3hiq3hi47hipUg4Yut4YiY4YiN4Yqo4YmxIOGLiOGLreGInSDhi6vhi7XhiLHhjaIiLAogICJDaGVjayBwYXltZW50IjogIuGKreGNjeGLq+GKlSDhi6vhiKjhjIvhjI3hjKEiLAogIFJlZmlsbDogIuGKpeGKleGLsOGMiOGKkyDhiJnhiIsiLAogICJDYW5jZWwgb3JkZXIiOiAi4Ym14YuV4Yub4YudIOGIsOGIreGLnSIsCiAgQmFsYW5jZTogIuGJgOGIqiDhiILhiLPhiaUiLAogICJBZGQgZnVuZHMiOiAi4YyI4YqV4YuY4YmlIOGMqOGIneGIrSIsCiAgUGVuZGluZzogIuGJoOGImOGMoOGJo+GJoOGJhSDhiIvhi60iLAogIFRyYW5zYWN0aW9uczogIuGMjeGJpeGLreGJtuGJvSIsCiAgIk5vIGFjdGl2aXR5IjogIuGKpeGKleGJheGIteGJg+GItCDhi6jhiIjhiJ0iLAogICJXYWxsZXQgYWN0aXZpdHkgd2lsbCBhcHBlYXIgaGVyZS4iOiAi4Yuo4YuL4YiM4Ym1IOGKpeGKleGJheGIteGJg+GItCDhiqXhi5rhiIUg4Yut4Ymz4Yur4YiN4Y2iIiwKICBTdXBwb3J0OiAi4Yu14YyL4Y2NIiwKICAiT3JkZXJzICYgcGF5bWVudHMiOiAi4Ym14YuV4Yub4Yue4Ym9IOGKpeGKkyDhiq3hjY3hi6vhi47hib0iLAogIE1vcmU6ICLhibDhjKjhiJvhiKoiLAogICJBcHAgaW5mbyI6ICLhi6jhiJjhibDhjI3hiaDhiKrhi6sg4YiY4Yio4YyDIiwKICBBZG1pbjogIuGKoOGIteGJsOGLs+GLs+GIqiIsCiAgIkNvbnRyb2wgY2VudGVyIjogIuGImOGJhuGMo+GMoOGIquGLqyIsCiAgIktlZXAgeW91ciBvcmRlciBJRCByZWFkeS4iOiAi4Yuo4Ym14YuV4Yub4YudIOGImOGIiOGLq+GLjuGKlSDhi6vhi5jhjIvhjIHhjaIiLAogICJLZWVwIHlvdXIgcGF5bWVudCByZWZlcmVuY2UgcmVhZHkuIjogIuGLqOGKreGNjeGLqyDhiJjhiIjhi6vhi47hipUg4Yur4YuY4YyL4YyB4Y2iIiwKICAiQ29udGFjdCBzdXBwb3J0IjogIuGLteGMi+GNjeGKlSDhi6vhjI3hipkiLAogIFVwZGF0ZXM6ICLhi53hiJvhipThi47hib0iLAogICJSZWZyZXNoIG9yZGVycyBmb3IgdGhlIGxhdGVzdCBzdGF0dXMuIjogIuGKoOGLsuGIseGKlSDhiIHhipThibMg4YiI4Yib4Yuo4Ym1IOGJteGLleGLm+GLnuGJveGKlSDhi6vhi7XhiLHhjaIiLAogICJTZWN1cmUgcGF5bWVudHMiOiAi4Yuw4YiF4YqV4YqQ4YmxIOGLqOGJsOGMoOGJoOGJgCDhiq3hjY3hi6siLAogICJQYXltZW50IGFuZCBwcm92aWRlciBjcmVkZW50aWFscyBzdGF5IHNlcnZlci1zaWRlLiI6ICLhi6jhiq3hjY3hi6sg4Yql4YqTIOGLqOGKoOGJheGIq+GJoiDhiJjhiKjhjIPhi47hib0g4Ymg4Yiw4Yit4Ymo4YitIOGIi+GLrSDhi63hjKDhiaDhiYPhiInhjaIiLAogIEFjY291bnQ6ICLhiJjhiIjhi6siLAogICJDb25uZWN0ZWQgdG8gVGVsZWdyYW0iOiAi4YqoVGVsZWdyYW0g4YyL4YitIOGJsOGMiOGKk+GKneGJt+GIjSIsCiAgIk9wZW4gZnJvbSBUZWxlZ3JhbSB0byBjb25uZWN0LiI6ICLhiIjhiJjhjIjhipPhipjhibUg4YmgVGVsZWdyYW0g4Yut4Yqt4Y2I4Ymx4Y2iIiwKICBDb25uZWN0aW5nOiAi4Ymg4YiY4YyI4YqT4YqY4Ym1IOGIi+GLrSIsCiAgIlNpZ24taW4gZmFpbGVkIjogIuGImOGMjeGJo+GJtSDhiqDhiI3hibDhiLPhiqvhiJ0iLAogICJPcGVuIGluIFRlbGVncmFtIjogIuGJoFRlbGVncmFtIOGLreGKreGNiOGJsSIsCiAgIk9uZSBtb21lbnTigKYiOiAi4Yqg4YqV4Yu1IOGKoOGNjeGJs+KApiIsCiAgIlJlb3BlbiB0aGUgTWluaSBBcHAgZnJvbSB0aGUgYm90LiI6ICJNaW5pIEFwcC3hipUg4Yqo4Ymm4YmxIOGKpeGKleGLsOGMiOGKkyDhi63hiq3hjYjhibHhjaIiLAogICJPcGVuIHRoaXMgTWluaSBBcHAgZnJvbSBEaW5rIFByb21vdGlvbiBvbiBUZWxlZ3JhbS4iOiAi4Yut4YiF4YqVIE1pbmkgQXBwIOGKqERpbmsgUHJvbW90aW9uIFRlbGVncmFtIOGJpuGJtSDhi63hiq3hjYjhibHhjaIiLAogIExvYWRpbmc6ICLhiaDhiJjhjKvhipUg4YiL4YutIiwKICAiQ291bGRu4oCZdCBsb2FkIHNlcnZpY2VzIjogIuGKoOGMiOGIjeGMjeGIjuGJtuGJueGKlSDhiJjhjKvhipUg4Yqg4YiN4Ymw4Ym74YiI4YidIiwKICAiVHJ5IGFnYWluIjogIuGKpeGKleGLsOGMiOGKkyDhiJ7hiq3hiK0iLAogICJObyBzZXJ2aWNlcyB5ZXQiOiAi4Yql4Yi14Yqr4YiB4YqVIOGKoOGMiOGIjeGMjeGIjuGJtSDhi6jhiIjhiJ0iLAogICJDaGVjayBiYWNrIHNob3J0bHkuIjogIuGJteGKleGIvSDhiYbhi63hibDhi40g4Yut4YiY4YiI4Yix4Y2iIiwKICAiTm8gbWF0Y2giOiAi4Ymw4Yub4Yib4YyFIOGKoOGIjeGJsOGMiOGKmOGInSIsCiAgIlRyeSBhbm90aGVyIHBsYXRmb3JtIG9yIHR5cGUuIjogIuGIjOGIiyDhjZXhiIvhibXhjY7hiK3hiJ0g4YuI4Yut4YidIOGLk+GLreGKkOGJtSDhi63hiJ7hiq3hiKnhjaIiLAogICJObyBvcmRlcnMiOiAi4Ym14YuV4Yub4YudIOGLqOGIiOGInSIsCiAgIlBhaWQgb3JkZXJzIHdpbGwgYXBwZWFyIGhlcmUuIjogIuGLqOGJsOGKqOGNiOGIiSDhibXhi5Xhi5vhi57hib0g4Yql4Yua4YiFIOGLreGJs+GLq+GIieGNoiIsCiAgIkNoZWNrb3V0IGRyYWZ0IjogIuGLq+GIjeGJsOGMoOGKk+GJgOGJgCDhiq3hjY3hi6siLAogIFBhaWQ6ICLhibDhiqjhjY3hiI/hiI0iLAogIFF1ZXVlZDogIuGJoOGJsOGIqyDhiIvhi60iLAogIFByb2Nlc3Npbmc6ICLhiaDhiILhi7DhibUg4YiL4YutIiwKICAiSW4gUHJvZ3Jlc3MiOiAi4Ymg4YiY4Yqo4YqT4YuI4YqVIOGIi+GLrSIsCiAgUGFydGlhbDogIuGJoOGKqOGNiuGIjSIsCiAgQ2FuY2VsZWQ6ICLhibDhiLDhiK3hi5/hiI0iLAogIEZhaWxlZDogIuGKoOGIjeGJsOGIs+GKq+GInSIsCiAgIlByb3ZpZGVyIFJldmlldyI6ICLhi6jhiqDhiYXhiKvhiaIg4Yib4Yio4YyL4YyI4YyrIiwKICAiUHJvdmlkZXIgRXJyb3IiOiAi4Yuo4Yqg4YmF4Yir4YmiIOGIteGIheGJsOGJtSIsCiAgIlBheW1lbnQgY29tcGxldGUiOiAi4Yqt4Y2N4Yur4YuNIOGJsOGMoOGKk+GJi+GIjSIsCiAgIlBheW1lbnQgY29uZmlybWVkIjogIuGKreGNjeGLq+GLjSDhibDhiKjhjIvhjI3hjKfhiI0iLAogICJTdGlsbCBwZW5kaW5nIjogIuGKreGNjeGLq+GLjSDhjIjhipMg4Ymg4YiY4Yyg4Ymj4Ymg4YmFIOGIi+GLrSDhipDhi40iLAogICJQYXltZW50IHdhcyBub3QgY29tcGxldGVkIjogIuGKreGNjeGLq+GLjSDhiqDhiI3hibDhjKDhipPhiYDhiYDhiJ0iLAogICJNaW5pbXVtIHRvcC11cCBpcyAxMCBFVEIuIjogIuGLneGJheGJsOGKm+GLjSDhi6jhi4vhiIzhibUg4YiZ4YiLIDEwIOGJpeGIrSDhipDhi43hjaIiLAogICJVbmFibGUgdG8gc3RhcnQgdG9wLXVwIjogIuGLi+GIjOGJtSDhiJnhiIvhipUg4YiY4YyA4YiY4YitIOGKoOGIjeGJsOGJu+GIiOGInSIsCiAgVXBkYXRlZDogIuGJsOGLmOGIneGKl+GIjSIsCiAgIlVuYWJsZSB0byByZWZyZXNoIjogIuGIm+GLsOGItSDhiqDhiI3hibDhibvhiIjhiJ0iLAogICJSZWZpbGwgcmVxdWVzdGVkIjogIuGLqOGKpeGKleGLsOGMiOGKkyDhiJnhiIsg4Yyl4Yur4YmEIOGJsOGIjeGKs+GIjSIsCiAgIlVuYWJsZSB0byByZXF1ZXN0IHJlZmlsbCI6ICLhi6jhiqXhipXhi7DhjIjhipMg4YiZ4YiLIOGMpeGLq+GJhCDhiJjhiIvhiq0g4Yqg4YiN4Ymw4Ym74YiI4YidIiwKICAiT3JkZXIgY2FuY2VsbGVkIjogIuGJteGLleGLm+GLmSDhibDhiLDhiK3hi5/hiI0iLAogICJVbmFibGUgdG8gY2FuY2VsIG9yZGVyIjogIuGJteGLleGLm+GLmeGKlSDhiJjhiLDhiKjhi50g4Yqg4YiN4Ymw4Ym74YiI4YidIiwKICAiR28gYmFjayI6ICLhi4jhi7Ag4YqL4YiLIiwKICAiTWFpbiBuYXZpZ2F0aW9uIjogIuGLi+GKkyDhiJjhi7PhiKjhiLsiLAp9OwoKY29uc3QgQVRUUjogUmVjb3JkPHN0cmluZywgc3RyaW5nPiA9IHsKICBTZWFyY2g6ICLhjYjhiI3hjI0iLAogICJodHRwczovLy4uLiI6ICJodHRwczovLy4uLiIsCiAgIjA5MTIzNDU2NzgiOiAiMDkxMjM0NTY3OCIsCiAgIkdvIGJhY2siOiAi4YuI4YuwIOGKi+GIiyIsCiAgIk1haW4gbmF2aWdhdGlvbiI6ICLhi4vhipMg4YiY4Yuz4Yio4Yi7IiwKfTsKCmZ1bmN0aW9uIHRyYW5zbGF0ZVRleHQodmFsdWU6IHN0cmluZykgewogIGNvbnN0IGxlYWRpbmcgPSB2YWx1ZS5tYXRjaCgvXlxzKi8pPy5bMF0gfHwgIiI7CiAgY29uc3QgdHJhaWxpbmcgPSB2YWx1ZS5tYXRjaCgvXHMqJC8pPy5bMF0gfHwgIiI7CiAgY29uc3QgY29yZSA9IHZhbHVlLnRyaW0oKTsKICBpZiAoIWNvcmUpIHJldHVybiB2YWx1ZTsKICBpZiAoQU1bY29yZV0pIHJldHVybiBgJHtsZWFkaW5nfSR7QU1bY29yZV19JHt0cmFpbGluZ31gOwoKICBjb25zdCBoaSA9IGNvcmUubWF0Y2goL15IaSxccyooLispJC8pOwogIGlmIChoaSkgcmV0dXJuIGAke2xlYWRpbmd94Yiw4YiL4Yid4Y2jICR7aGlbMV19JHt0cmFpbGluZ31gOwogIGNvbnN0IGF2YWlsYWJsZSA9IGNvcmUubWF0Y2goL14oXGRbXGQsXSopIGF2YWlsYWJsZSQvKTsKICBpZiAoYXZhaWxhYmxlKSByZXR1cm4gYCR7bGVhZGluZ30ke2F2YWlsYWJsZVsxXX0g4Yqg4YyI4YiN4YyN4YiO4Ym24Ym9JHt0cmFpbGluZ31gOwogIGNvbnN0IGNob29zZVF1YW50aXR5ID0gY29yZS5tYXRjaCgvXkNob29zZSBhIHF1YW50aXR5IGZyb20gKC4rKSB0byAoLispXC4kLyk7CiAgaWYgKGNob29zZVF1YW50aXR5KSByZXR1cm4gYCR7bGVhZGluZ33hiJjhjKDhipHhipUg4YqoJHtjaG9vc2VRdWFudGl0eVsxXX0g4Yql4Yi14YqoICR7Y2hvb3NlUXVhbnRpdHlbMl19IOGLreGIneGIqOGMoeGNoiR7dHJhaWxpbmd9YDsKICBpZiAoY29yZS5zdGFydHNXaXRoKCJQYXkgIikpIHJldHVybiBgJHtsZWFkaW5nfSR7Y29yZS5zbGljZSg0KX0g4Yut4Yqt4Y2I4YiJJHt0cmFpbGluZ31gOwogIGlmIChjb3JlLnN0YXJ0c1dpdGgoIlVzZSB3YWxsZXQgwrciKSkgcmV0dXJuIGAke2xlYWRpbmd94YuL4YiM4Ym1IOGLreGMoOGJgOGImSDCtyR7Y29yZS5zbGljZSgiVXNlIHdhbGxldCDCtyIubGVuZ3RoKX0ke3RyYWlsaW5nfWA7CiAgaWYgKGNvcmUuc3RhcnRzV2l0aCgiU3RhcnQ6ICIpKSByZXR1cm4gYCR7bGVhZGluZ33hiJjhipDhiLvhjaYgJHtjb3JlLnNsaWNlKDcpfSR7dHJhaWxpbmd9YDsKICBpZiAoY29yZS5zdGFydHNXaXRoKCJSZW1haW5pbmc6ICIpKSByZXR1cm4gYCR7bGVhZGluZ33hiYDhiKrhjaYgJHtjb3JlLnNsaWNlKDExKX0ke3RyYWlsaW5nfWA7CiAgcmV0dXJuIHZhbHVlOwp9CgpmdW5jdGlvbiBzaG91bGRTa2lwKG5vZGU6IFRleHQpIHsKICBjb25zdCBwYXJlbnQgPSBub2RlLnBhcmVudEVsZW1lbnQ7CiAgcmV0dXJuICEhcGFyZW50Py5jbG9zZXN0KAogICAgIi5zZXJ2aWNlLWNvcHkgc3Ryb25nLCAuc2VydmljZS1jb3B5IHNtYWxsLCAuc2VydmljZS1wcmljZSwgLnNlcnZpY2UtZ3JvdXAtaGVhZCBoMiwgLm9yZGVyLWNvcHkgc3Ryb25nLCAuY2hlY2tvdXQtc2VydmljZSBzdHJvbmcsIC5wcm9maWxlLWNhcmQgaDEsIC5wcm9maWxlLWNhcmQgcCwgLnRyYW5zYWN0aW9uLXJvdyBzdHJvbmcsIC50cmFuc2FjdGlvbi1yb3cgc21hbGwsIC50cmFuc2FjdGlvbi1yb3cgYiIsCiAgKTsKfQoKZnVuY3Rpb24gYXBwbHlUaGVtZSh0aGVtZTogVGhlbWUpIHsKICBkb2N1bWVudC5kb2N1bWVudEVsZW1lbnQuZGF0YXNldC50aGVtZSA9IHRoZW1lOwogIGRvY3VtZW50LmRvY3VtZW50RWxlbWVudC5zdHlsZS5jb2xvclNjaGVtZSA9IHRoZW1lOwogIGNvbnN0IGRhcmsgPSB0aGVtZSA9PT0gImRhcmsiOwogIHdpbmRvdy5UZWxlZ3JhbT8uV2ViQXBwLnNldEhlYWRlckNvbG9yPy4oZGFyayA/ICIjMGUxMTEwIiA6ICIjZmZmZmZmIik7CiAgd2luZG93LlRlbGVncmFtPy5XZWJBcHAuc2V0QmFja2dyb3VuZENvbG9yPy4oZGFyayA/ICIjMGUxMTEwIiA6ICIjZjVmN2Y2Iik7Cn0KCmV4cG9ydCBmdW5jdGlvbiBMb2NhbGl6ZWRNaW5pQXBwVjIoKSB7CiAgY29uc3QgW2xhbmd1YWdlLCBzZXRMYW5ndWFnZV0gPSB1c2VTdGF0ZTxMYW5ndWFnZT4oImVuIik7CiAgY29uc3QgW3RoZW1lLCBzZXRUaGVtZV0gPSB1c2VTdGF0ZTxUaGVtZT4oImxpZ2h0Iik7CiAgY29uc3QgW3JlYWR5LCBzZXRSZWFkeV0gPSB1c2VTdGF0ZShmYWxzZSk7CiAgY29uc3Qgcm9vdFJlZiA9IHVzZVJlZjxIVE1MRGl2RWxlbWVudD4obnVsbCk7CiAgY29uc3Qgb3JpZ2luYWxzID0gdXNlUmVmKG5ldyBXZWFrTWFwPFRleHQsIHN0cmluZz4oKSk7CiAgY29uc3QgYXR0ck9yaWdpbmFscyA9IHVzZVJlZihuZXcgV2Vha01hcDxFbGVtZW50LCBNYXA8c3RyaW5nLCBzdHJpbmc+PigpKTsKCiAgdXNlRWZmZWN0KCgpID0+IHsKICAgIGNvbnN0IHNhdmVkTGFuZ3VhZ2UgPSBsb2NhbFN0b3JhZ2UuZ2V0SXRlbShMQU5HVUFHRV9LRVkpOwogICAgY29uc3Qgc2F2ZWRUaGVtZSA9IGxvY2FsU3RvcmFnZS5nZXRJdGVtKFRIRU1FX0tFWSk7CiAgICBjb25zdCBpbml0aWFsVGhlbWU6IFRoZW1lID0gc2F2ZWRUaGVtZSA9PT0gImRhcmsiIHx8IHNhdmVkVGhlbWUgPT09ICJsaWdodCIKICAgICAgPyBzYXZlZFRoZW1lCiAgICAgIDogKG1hdGNoTWVkaWEoIihwcmVmZXJzLWNvbG9yLXNjaGVtZTogZGFyaykiKS5tYXRjaGVzID8gImRhcmsiIDogImxpZ2h0Iik7CiAgICBzZXRMYW5ndWFnZShzYXZlZExhbmd1YWdlID09PSAiYW0iID8gImFtIiA6ICJlbiIpOwogICAgc2V0VGhlbWUoaW5pdGlhbFRoZW1lKTsKICAgIGFwcGx5VGhlbWUoaW5pdGlhbFRoZW1lKTsKICAgIHNldFJlYWR5KHRydWUpOwogIH0sIFtdKTsKCiAgdXNlRWZmZWN0KCgpID0+IHsKICAgIGlmICghcmVhZHkpIHJldHVybjsKICAgIGxvY2FsU3RvcmFnZS5zZXRJdGVtKFRIRU1FX0tFWSwgdGhlbWUpOwogICAgYXBwbHlUaGVtZSh0aGVtZSk7CiAgfSwgW3RoZW1lLCByZWFkeV0pOwoKICB1c2VFZmZlY3QoKCkgPT4gewogICAgaWYgKCFyZWFkeSkgcmV0dXJuOwogICAgbG9jYWxTdG9yYWdlLnNldEl0ZW0oTEFOR1VBR0VfS0VZLCBsYW5ndWFnZSk7CiAgICBkb2N1bWVudC5kb2N1bWVudEVsZW1lbnQubGFuZyA9IGxhbmd1YWdlOwogICAgY29uc3Qgcm9vdCA9IHJvb3RSZWYuY3VycmVudDsKICAgIGlmICghcm9vdCkgcmV0dXJuOwoKICAgIGNvbnN0IHRleHROb2RlID0gKG5vZGU6IFRleHQpID0+IHsKICAgICAgaWYgKHNob3VsZFNraXAobm9kZSkpIHJldHVybjsKICAgICAgaWYgKCFvcmlnaW5hbHMuY3VycmVudC5oYXMobm9kZSkpIG9yaWdpbmFscy5jdXJyZW50LnNldChub2RlLCBub2RlLmRhdGEpOwogICAgICBjb25zdCBzb3VyY2UgPSBvcmlnaW5hbHMuY3VycmVudC5nZXQobm9kZSkgfHwgbm9kZS5kYXRhOwogICAgICBjb25zdCBuZXh0ID0gbGFuZ3VhZ2UgPT09ICJhbSIgPyB0cmFuc2xhdGVUZXh0KHNvdXJjZSkgOiBzb3VyY2U7CiAgICAgIGlmIChub2RlLmRhdGEgIT09IG5leHQpIG5vZGUuZGF0YSA9IG5leHQ7CiAgICB9OwoKICAgIGNvbnN0IGVsZW1lbnQgPSAoZWw6IEVsZW1lbnQpID0+IHsKICAgICAgZm9yIChjb25zdCBuYW1lIG9mIFsicGxhY2Vob2xkZXIiLCAiYXJpYS1sYWJlbCIsICJ0aXRsZSJdKSB7CiAgICAgICAgY29uc3QgY3VycmVudCA9IGVsLmdldEF0dHJpYnV0ZShuYW1lKTsKICAgICAgICBpZiAoIWN1cnJlbnQpIGNvbnRpbnVlOwogICAgICAgIGxldCBtYXAgPSBhdHRyT3JpZ2luYWxzLmN1cnJlbnQuZ2V0KGVsKTsKICAgICAgICBpZiAoIW1hcCkgewogICAgICAgICAgbWFwID0gbmV3IE1hcDxzdHJpbmcsIHN0cmluZz4oKTsKICAgICAgICAgIGF0dHJPcmlnaW5hbHMuY3VycmVudC5zZXQoZWwsIG1hcCk7CiAgICAgICAgfQogICAgICAgIGlmICghbWFwLmhhcyhuYW1lKSkgbWFwLnNldChuYW1lLCBjdXJyZW50KTsKICAgICAgICBjb25zdCBzb3VyY2UgPSBtYXAuZ2V0KG5hbWUpIHx8IGN1cnJlbnQ7CiAgICAgICAgY29uc3QgbmV4dCA9IGxhbmd1YWdlID09PSAiYW0iID8gKEFUVFJbc291cmNlXSB8fCBBTVtzb3VyY2VdIHx8IHNvdXJjZSkgOiBzb3VyY2U7CiAgICAgICAgaWYgKGN1cnJlbnQgIT09IG5leHQpIGVsLnNldEF0dHJpYnV0ZShuYW1lLCBuZXh0KTsKICAgICAgfQogICAgfTsKCiAgICBjb25zdCBwcm9jZXNzID0gKHRhcmdldDogTm9kZSkgPT4gewogICAgICBpZiAodGFyZ2V0Lm5vZGVUeXBlID09PSBOb2RlLlRFWFRfTk9ERSkgcmV0dXJuIHRleHROb2RlKHRhcmdldCBhcyBUZXh0KTsKICAgICAgaWYgKCEodGFyZ2V0IGluc3RhbmNlb2YgRWxlbWVudCkpIHJldHVybjsKICAgICAgZWxlbWVudCh0YXJnZXQpOwogICAgICBjb25zdCB3YWxrZXIgPSBkb2N1bWVudC5jcmVhdGVUcmVlV2Fsa2VyKHRhcmdldCwgTm9kZUZpbHRlci5TSE9XX1RFWFQgfCBOb2RlRmlsdGVyLlNIT1dfRUxFTUVOVCk7CiAgICAgIGxldCBjdXJyZW50ID0gd2Fsa2VyLm5leHROb2RlKCk7CiAgICAgIHdoaWxlIChjdXJyZW50KSB7CiAgICAgICAgaWYgKGN1cnJlbnQubm9kZVR5cGUgPT09IE5vZGUuVEVYVF9OT0RFKSB0ZXh0Tm9kZShjdXJyZW50IGFzIFRleHQpOwogICAgICAgIGVsc2UgaWYgKGN1cnJlbnQgaW5zdGFuY2VvZiBFbGVtZW50KSBlbGVtZW50KGN1cnJlbnQpOwogICAgICAgIGN1cnJlbnQgPSB3YWxrZXIubmV4dE5vZGUoKTsKICAgICAgfQogICAgfTsKCiAgICBwcm9jZXNzKHJvb3QpOwogICAgbGV0IHJhZiA9IDA7CiAgICBjb25zdCBwZW5kaW5nID0gbmV3IFNldDxOb2RlPigpOwogICAgY29uc3QgZmx1c2ggPSAoKSA9PiB7CiAgICAgIHJhZiA9IDA7CiAgICAgIHBlbmRpbmcuZm9yRWFjaChwcm9jZXNzKTsKICAgICAgcGVuZGluZy5jbGVhcigpOwogICAgfTsKICAgIGNvbnN0IG9ic2VydmVyID0gbmV3IE11dGF0aW9uT2JzZXJ2ZXIoKG11dGF0aW9ucykgPT4gewogICAgICBmb3IgKGNvbnN0IG11dGF0aW9uIG9mIG11dGF0aW9ucykgewogICAgICAgIGlmIChtdXRhdGlvbi50eXBlID09PSAiY2hhcmFjdGVyRGF0YSIpIHBlbmRpbmcuYWRkKG11dGF0aW9uLnRhcmdldCk7CiAgICAgICAgbXV0YXRpb24uYWRkZWROb2Rlcy5mb3JFYWNoKChub2RlKSA9PiBwZW5kaW5nLmFkZChub2RlKSk7CiAgICAgIH0KICAgICAgaWYgKCFyYWYpIHJhZiA9IHJlcXVlc3RBbmltYXRpb25GcmFtZShmbHVzaCk7CiAgICB9KTsKICAgIG9ic2VydmVyLm9ic2VydmUocm9vdCwgeyBzdWJ0cmVlOiB0cnVlLCBjaGlsZExpc3Q6IHRydWUsIGNoYXJhY3RlckRhdGE6IHRydWUgfSk7CgogICAgcmV0dXJuICgpID0+IHsKICAgICAgb2JzZXJ2ZXIuZGlzY29ubmVjdCgpOwogICAgICBpZiAocmFmKSBjYW5jZWxBbmltYXRpb25GcmFtZShyYWYpOwogICAgfTsKICB9LCBbbGFuZ3VhZ2UsIHJlYWR5XSk7CgogIHJldHVybiAoCiAgICA8ZGl2IGNsYXNzTmFtZT0ibG9jYWxpemVkLW1pbmktYXBwIiBkYXRhLWxhbmd1YWdlPXtsYW5ndWFnZX0gZGF0YS10aGVtZT17dGhlbWV9PgogICAgICA8ZGl2IGNsYXNzTmFtZT0iYXBwLXByZWZlcmVuY2VzIiBhcmlhLWxhYmVsPXtsYW5ndWFnZSA9PT0gImFtIiA/ICLhiYvhipXhiYsg4Yql4YqTIOGMiOGMveGJsyIgOiAiTGFuZ3VhZ2UgYW5kIGFwcGVhcmFuY2UifT4KICAgICAgICA8YnV0dG9uCiAgICAgICAgICB0eXBlPSJidXR0b24iCiAgICAgICAgICBjbGFzc05hbWU9InByZWZlcmVuY2UtYnV0dG9uIHRoZW1lLXRvZ2dsZSIKICAgICAgICAgIG9uQ2xpY2s9eygpID0+IHNldFRoZW1lKCh2YWx1ZSkgPT4gdmFsdWUgPT09ICJkYXJrIiA/ICJsaWdodCIgOiAiZGFyayIpfQogICAgICAgICAgYXJpYS1sYWJlbD17dGhlbWUgPT09ICJkYXJrIiA/IChsYW5ndWFnZSA9PT0gImFtIiA/ICLhiaXhiK3hiIPhipUg4YyI4Yy94YmzIiA6ICJVc2UgbGlnaHQgbW9kZSIpIDogKGxhbmd1YWdlID09PSAiYW0iID8gIuGMqOGIiOGImyDhjIjhjL3hibMiIDogIlVzZSBkYXJrIG1vZGUiKX0KICAgICAgICA+CiAgICAgICAgICB7dGhlbWUgPT09ICJkYXJrIiA/IDxTdW4gc2l6ZT17MTd9IC8+IDogPE1vb24gc2l6ZT17MTd9IC8+fQogICAgICAgIDwvYnV0dG9uPgogICAgICAgIDxidXR0b24KICAgICAgICAgIHR5cGU9ImJ1dHRvbiIKICAgICAgICAgIGNsYXNzTmFtZT0icHJlZmVyZW5jZS1idXR0b24gbGFuZ3VhZ2UtdG9nZ2xlIGxhbmd1YWdlLXNlZ21lbnRlZCIKICAgICAgICAgIG9uQ2xpY2s9eygpID0+IHNldExhbmd1YWdlKCh2YWx1ZSkgPT4gdmFsdWUgPT09ICJlbiIgPyAiYW0iIDogImVuIil9CiAgICAgICAgICBhcmlhLWxhYmVsPXtsYW5ndWFnZSA9PT0gImVuIiA/ICLhi4jhi7Ag4Yqg4Yib4Yit4YqbIOGJgOGLreGIrSIgOiAiU3dpdGNoIHRvIEVuZ2xpc2gifQogICAgICAgID4KICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT17bGFuZ3VhZ2UgPT09ICJlbiIgPyAiYWN0aXZlIiA6ICIifT5FTjwvc3Bhbj4KICAgICAgICAgIDxzcGFuIGFyaWEtaGlkZGVuPSJ0cnVlIj4vPC9zcGFuPgogICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPXtsYW5ndWFnZSA9PT0gImFtIiA/ICJhY3RpdmUiIDogIiJ9PuGKoOGImzwvc3Bhbj4KICAgICAgICA8L2J1dHRvbj4KICAgICAgPC9kaXY+CiAgICAgIDxkaXYgcmVmPXtyb290UmVmfSBjbGFzc05hbWU9Im1pbmktYXBwLWkxOG4tcm9vdCI+CiAgICAgICAgPE1pbmlBcHBVeEVuaGFuY2VyIC8+CiAgICAgICAgPE1pbmlBcHBWMiAvPgogICAgICA8L2Rpdj4KICAgIDwvZGl2PgogICk7Cn0K
+"use client";
+
+import { Moon, Sun } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MiniAppUxEnhancer } from "./MiniAppUxEnhancer";
+import { MiniAppV2 } from "./MiniAppV2";
+
+type Language = "en" | "am";
+type Theme = "light" | "dark";
+
+const LANGUAGE_KEY = "dink-promotion-language";
+const THEME_KEY = "dink-promotion-theme";
+
+const AM: Record<string, string> = {
+  Offline: "ከመስመር ውጭ",
+  Home: "መነሻ",
+  Services: "አገልግሎቶች",
+  Orders: "ትዕዛዞች",
+  Wallet: "ዋሌት",
+  Profile: "መገለጫ",
+  "Dink balance": "የDink ቀሪ ሂሳብ",
+  "Telegram account": "የTelegram መለያ",
+  "Promotion made simple": "ቀላል የፕሮሞሽን አገልግሎት",
+  "Promote in a few taps.": "በጥቂት ንክኪዎች ፕሮሞሽን ያድርጉ።",
+  "Choose a platform. Pick a service. Pay in ETB.": "ፕላትፎርም ይምረጡ፣ አገልግሎት ይምረጡ፣ በብር ይክፈሉ።",
+  "Browse services": "አገልግሎቶችን ይመልከቱ",
+  "Open from Telegram to order": "ለማዘዝ በTelegram ይክፈቱ",
+  Platforms: "ፕላትፎርሞች",
+  Popular: "ተወዳጅ",
+  "See all": "ሁሉን ይመልከቱ",
+  Search: "ፈልግ",
+  All: "ሁሉም",
+  Type: "ዓይነት",
+  "Service type": "የአገልግሎት ዓይነት",
+  "Explore services": "አገልግሎቶችን ይመልከቱ",
+  Link: "ሊንክ",
+  Quantity: "ብዛት",
+  Total: "ጠቅላላ",
+  Subtotal: "የአገልግሎት ዋጋ",
+  "Processing fee": "የክፍያ አገልግሎት",
+  Creating: "በመፍጠር ላይ",
+  Continue: "ቀጥል",
+  Payment: "ክፍያ",
+  "Promotion service": "የፕሮሞሽን አገልግሎት",
+  Pay: "ይክፈሉ",
+  "Mobile number": "ስልክ ቁጥር",
+  "Use wallet ·": "ዋሌት ይጠቀሙ ·",
+  "Confirm payment": "ክፍያውን ያረጋግጡ",
+  "Approve the request on your phone.": "በስልክዎ የክፍያ ጥያቄውን ያረጋግጡ።",
+  "Check status": "ሁኔታን ያረጋግጡ",
+  "My orders": "ትዕዛዞቼ",
+  "Your purchases": "የእርስዎ ግዢዎች",
+  Refresh: "አድስ",
+  Order: "ትዕዛዝ",
+  Status: "ሁኔታ",
+  "Start:": "መነሻ፦",
+  "Remaining:": "ቀሪ፦",
+  "Manual review": "በእጅ ማረጋገጫ",
+  "Admin review is required.": "የአስተዳዳሪ ማረጋገጫ ያስፈልጋል።",
+  "Provider error": "የአቅራቢ ስህተት",
+  "Admin attention is required.": "የአስተዳዳሪ እርምጃ ያስፈልጋል።",
+  Completed: "ተጠናቋል",
+  "Finished.": "ተጠናቋል።",
+  "Payment pending": "ክፍያ በመጠባበቅ ላይ",
+  "Check your phone or refresh.": "ስልክዎን ይመልከቱ ወይም ያድሱ።",
+  "Check payment": "ክፍያን ያረጋግጡ",
+  Refill: "እንደገና ሙላ",
+  "Cancel order": "ትዕዛዝ ሰርዝ",
+  Balance: "ቀሪ ሂሳብ",
+  "Add funds": "ገንዘብ ጨምር",
+  Pending: "በመጠባበቅ ላይ",
+  Transactions: "ግብይቶች",
+  "No activity": "እንቅስቃሴ የለም",
+  "Wallet activity will appear here.": "የዋሌት እንቅስቃሴ እዚህ ይታያል።",
+  Support: "ድጋፍ",
+  "Orders & payments": "ትዕዛዞች እና ክፍያዎች",
+  More: "ተጨማሪ",
+  "App info": "የመተግበሪያ መረጃ",
+  Admin: "አስተዳዳሪ",
+  "Control center": "መቆጣጠሪያ",
+  "Keep your order ID ready.": "የትዕዛዝ መለያዎን ያዘጋጁ።",
+  "Keep your payment reference ready.": "የክፍያ መለያዎን ያዘጋጁ።",
+  "Contact support": "ድጋፍን ያግኙ",
+  Updates: "ዝማኔዎች",
+  "Refresh orders for the latest status.": "አዲሱን ሁኔታ ለማየት ትዕዛዞችን ያድሱ።",
+  "Secure payments": "ደህንነቱ የተጠበቀ ክፍያ",
+  "Payment and provider credentials stay server-side.": "የክፍያ እና የአቅራቢ መረጃዎች በሰርቨር ላይ ይጠበቃሉ።",
+  Account: "መለያ",
+  "Connected to Telegram": "ከTelegram ጋር ተገናኝቷል",
+  "Open from Telegram to connect.": "ለመገናኘት በTelegram ይክፈቱ።",
+  Connecting: "በመገናኘት ላይ",
+  "Sign-in failed": "መግባት አልተሳካም",
+  "Open in Telegram": "በTelegram ይክፈቱ",
+  "One moment…": "አንድ አፍታ…",
+  "Reopen the Mini App from the bot.": "Mini App-ን ከቦቱ እንደገና ይክፈቱ።",
+  "Open this Mini App from Dink Promotion on Telegram.": "ይህን Mini App ከDink Promotion Telegram ቦት ይክፈቱ።",
+  Loading: "በመጫን ላይ",
+  "Couldn’t load services": "አገልግሎቶቹን መጫን አልተቻለም",
+  "Try again": "እንደገና ሞክር",
+  "No services yet": "እስካሁን አገልግሎት የለም",
+  "Check back shortly.": "ትንሽ ቆይተው ይመለሱ።",
+  "No match": "ተዛማጅ አልተገኘም",
+  "Try another platform or type.": "ሌላ ፕላትፎርም ወይም ዓይነት ይሞክሩ።",
+  "No orders": "ትዕዛዝ የለም",
+  "Paid orders will appear here.": "የተከፈሉ ትዕዛዞች እዚህ ይታያሉ።",
+  "Checkout draft": "ያልተጠናቀቀ ክፍያ",
+  Paid: "ተከፍሏል",
+  Queued: "በተራ ላይ",
+  Processing: "በሂደት ላይ",
+  "In Progress": "በመከናወን ላይ",
+  Partial: "በከፊል",
+  Canceled: "ተሰርዟል",
+  Failed: "አልተሳካም",
+  "Provider Review": "የአቅራቢ ማረጋገጫ",
+  "Provider Error": "የአቅራቢ ስህተት",
+  "Payment complete": "ክፍያው ተጠናቋል",
+  "Payment confirmed": "ክፍያው ተረጋግጧል",
+  "Still pending": "ክፍያው ገና በመጠባበቅ ላይ ነው",
+  "Payment was not completed": "ክፍያው አልተጠናቀቀም",
+  "Minimum top-up is 10 ETB.": "ዝቅተኛው የዋሌት ሙላ 10 ብር ነው።",
+  "Unable to start top-up": "ዋሌት ሙላን መጀመር አልተቻለም",
+  Updated: "ተዘምኗል",
+  "Unable to refresh": "ማደስ አልተቻለም",
+  "Refill requested": "የእንደገና ሙላ ጥያቄ ተልኳል",
+  "Unable to request refill": "የእንደገና ሙላ ጥያቄ መላክ አልተቻለም",
+  "Order cancelled": "ትዕዛዙ ተሰርዟል",
+  "Unable to cancel order": "ትዕዛዙን መሰረዝ አልተቻለም",
+  "Go back": "ወደ ኋላ",
+  "Main navigation": "ዋና መዳረሻ",
+};
+
+const ATTR: Record<string, string> = {
+  Search: "ፈልግ",
+  "https://...": "https://...",
+  "0912345678": "0912345678",
+  "Go back": "ወደ ኋላ",
+  "Main navigation": "ዋና መዳረሻ",
+};
+
+function translateText(value: string) {
+  const leading = value.match(/^\s*/)?.[0] || "";
+  const trailing = value.match(/\s*$/)?.[0] || "";
+  const core = value.trim();
+  if (!core) return value;
+  if (AM[core]) return `${leading}${AM[core]}${trailing}`;
+
+  const hi = core.match(/^Hi,\s*(.+)$/);
+  if (hi) return `${leading}ሰላም፣ ${hi[1]}${trailing}`;
+  const available = core.match(/^(\d[\d,]*) available$/);
+  if (available) return `${leading}${available[1]} አገልግሎቶች${trailing}`;
+  const chooseQuantity = core.match(/^Choose a quantity from (.+) to (.+)\.$/);
+  if (chooseQuantity) return `${leading}መጠኑን ከ${chooseQuantity[1]} እስከ ${chooseQuantity[2]} ይምረጡ።${trailing}`;
+  if (core.startsWith("Pay ")) return `${leading}${core.slice(4)} ይክፈሉ${trailing}`;
+  if (core.startsWith("Use wallet ·")) return `${leading}ዋሌት ይጠቀሙ ·${core.slice("Use wallet ·".length)}${trailing}`;
+  if (core.startsWith("Start: ")) return `${leading}መነሻ፦ ${core.slice(7)}${trailing}`;
+  if (core.startsWith("Remaining: ")) return `${leading}ቀሪ፦ ${core.slice(11)}${trailing}`;
+  return value;
+}
+
+function shouldSkip(node: Text) {
+  const parent = node.parentElement;
+  return !!parent?.closest(
+    ".service-copy strong, .service-copy small, .service-price, .service-group-head h2, .order-copy strong, .checkout-service strong, .profile-card h1, .profile-card p, .transaction-row strong, .transaction-row small, .transaction-row b",
+  );
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  const dark = theme === "dark";
+  window.Telegram?.WebApp.setHeaderColor?.(dark ? "#0e1110" : "#ffffff");
+  window.Telegram?.WebApp.setBackgroundColor?.(dark ? "#0e1110" : "#f5f7f6");
+}
+
+export function LocalizedMiniAppV2() {
+  const [language, setLanguage] = useState<Language>("en");
+  const [theme, setTheme] = useState<Theme>("light");
+  const [ready, setReady] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const originals = useRef(new WeakMap<Text, string>());
+  const attrOriginals = useRef(new WeakMap<Element, Map<string, string>>());
+
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    const initialTheme: Theme = savedTheme === "dark" || savedTheme === "light"
+      ? savedTheme
+      : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    setLanguage(savedLanguage === "am" ? "am" : "en");
+    setTheme(initialTheme);
+    applyTheme(initialTheme);
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    localStorage.setItem(THEME_KEY, theme);
+    applyTheme(theme);
+  }, [theme, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    localStorage.setItem(LANGUAGE_KEY, language);
+    document.documentElement.lang = language;
+    const root = rootRef.current;
+    if (!root) return;
+
+    const textNode = (node: Text) => {
+      if (shouldSkip(node)) return;
+      if (!originals.current.has(node)) originals.current.set(node, node.data);
+      const source = originals.current.get(node) || node.data;
+      const next = language === "am" ? translateText(source) : source;
+      if (node.data !== next) node.data = next;
+    };
+
+    const element = (el: Element) => {
+      for (const name of ["placeholder", "aria-label", "title"]) {
+        const current = el.getAttribute(name);
+        if (!current) continue;
+        let map = attrOriginals.current.get(el);
+        if (!map) {
+          map = new Map<string, string>();
+          attrOriginals.current.set(el, map);
+        }
+        if (!map.has(name)) map.set(name, current);
+        const source = map.get(name) || current;
+        const next = language === "am" ? (ATTR[source] || AM[source] || source) : source;
+        if (current !== next) el.setAttribute(name, next);
+      }
+    };
+
+    const process = (target: Node) => {
+      if (target.nodeType === Node.TEXT_NODE) return textNode(target as Text);
+      if (!(target instanceof Element)) return;
+      element(target);
+      const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+      let current = walker.nextNode();
+      while (current) {
+        if (current.nodeType === Node.TEXT_NODE) textNode(current as Text);
+        else if (current instanceof Element) element(current);
+        current = walker.nextNode();
+      }
+    };
+
+    process(root);
+    let raf = 0;
+    const pending = new Set<Node>();
+    const flush = () => {
+      raf = 0;
+      pending.forEach(process);
+      pending.clear();
+    };
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "characterData") pending.add(mutation.target);
+        mutation.addedNodes.forEach((node) => pending.add(node));
+      }
+      if (!raf) raf = requestAnimationFrame(flush);
+    });
+    observer.observe(root, { subtree: true, childList: true, characterData: true });
+
+    return () => {
+      observer.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [language, ready]);
+
+  return (
+    <div className="localized-mini-app" data-language={language} data-theme={theme}>
+      <div className="app-preferences" aria-label={language === "am" ? "ቋንቋ እና ገጽታ" : "Language and appearance"}>
+        <button
+          type="button"
+          className="preference-button theme-toggle"
+          onClick={() => setTheme((value) => value === "dark" ? "light" : "dark")}
+          aria-label={theme === "dark" ? (language === "am" ? "ብርሃን ገጽታ" : "Use light mode") : (language === "am" ? "ጨለማ ገጽታ" : "Use dark mode")}
+        >
+          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+        <button
+          type="button"
+          className="preference-button language-toggle language-segmented"
+          onClick={() => setLanguage((value) => value === "en" ? "am" : "en")}
+          aria-label={language === "en" ? "ወደ አማርኛ ቀይር" : "Switch to English"}
+        >
+          <span className={language === "en" ? "active" : ""}>EN</span>
+          <span aria-hidden="true">/</span>
+          <span className={language === "am" ? "active" : ""}>አማ</span>
+        </button>
+      </div>
+      <div ref={rootRef} className="mini-app-i18n-root">
+        <MiniAppUxEnhancer />
+        <MiniAppV2 />
+      </div>
+    </div>
+  );
+}
