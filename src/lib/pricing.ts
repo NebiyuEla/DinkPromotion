@@ -1,6 +1,7 @@
 import { AppError } from "./http";
 
 const POSTGRES_INT_MAX = 2_147_483_647;
+const DEFAULT_SELL_RATE = 194;
 
 export function calculateOrderAmountMinor(pricePerThousandMinor: number, quantity: number) {
   if (!Number.isSafeInteger(pricePerThousandMinor) || pricePerThousandMinor <= 0) {
@@ -16,14 +17,18 @@ export function calculateOrderAmountMinor(pricePerThousandMinor: number, quantit
   return amount;
 }
 
-export function providerRateToEtbMinor(providerRateUsd: string) {
-  const exchange = Number(process.env.PRICING_USD_ETB_RATE || "");
-  const markup = Number(process.env.DEFAULT_MARKUP_PERCENT || "");
+/**
+ * Convert PRM4U's USD rate into the Dink customer service price.
+ * This is the service sell rate only. Chapa's processing fee is deliberately
+ * excluded and is added later when a direct payment is initiated.
+ */
+export function providerRateToEtbMinor(providerRateUsd: string, configuredSellRate?: number) {
+  const envSellRate = Number(process.env.PRICING_SELL_USD_ETB_RATE || "");
+  const sellRate = configuredSellRate ?? (Number.isFinite(envSellRate) && envSellRate > 0 ? envSellRate : DEFAULT_SELL_RATE);
   const rate = Number(providerRateUsd);
-  if (![exchange, markup, rate].every(Number.isFinite) || exchange <= 0 || markup < 0 || rate < 0) {
-    return 0;
-  }
-  const minor = Math.ceil(rate * exchange * (1 + markup / 100) * 100);
+  if (![sellRate, rate].every(Number.isFinite) || sellRate <= 0 || rate < 0) return 0;
+
+  const minor = Math.ceil(rate * sellRate * 100);
   return Number.isSafeInteger(minor) && minor <= POSTGRES_INT_MAX ? minor : 0;
 }
 
