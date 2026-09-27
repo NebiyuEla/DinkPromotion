@@ -36,6 +36,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Brand } from "./Brand";
 import { PlatformIcon, platformClass } from "./PlatformIcon";
+import { getTelegramInitData } from "../lib/telegram-init-data";
 
 export type MiniAppLanguage = "en" | "am";
 export type MiniAppTheme = "light" | "dark";
@@ -580,7 +581,7 @@ export function MiniAppV3({ language, theme, onToggleLanguage, onToggleTheme }: 
       const tg = window.Telegram?.WebApp;
       tg?.ready();
       tg?.expand();
-      const initData = tg?.initData;
+      const initData = getTelegramInitData();
       if (!initData) {
         if (active) setAuthState("telegram-required");
         return;
