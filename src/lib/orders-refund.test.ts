@@ -1,7 +1,6 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
-// Cancellation refund behavior is covered through the shared helper in src/lib/orders.ts.
-// This file intentionally tests the pure refund-target rule without requiring a database.
 function targetRefundMinor(input: {
   orderAmountMinor: number;
   payment?: { status: "SUCCESS" | "FAILED" | "PENDING"; kind: "ORDER" | "WALLET_TOPUP"; amountMinor: number } | null;
@@ -14,20 +13,20 @@ function targetRefundMinor(input: {
 
 describe("cancelled order refund target", () => {
   it("refunds service price plus processing fee for a successful direct order payment", () => {
-    expect(targetRefundMinor({
+    assert.equal(targetRefundMinor({
       orderAmountMinor: 10_000,
       payment: { status: "SUCCESS", kind: "ORDER", amountMinor: 10_288 },
-    })).toBe(10_288);
+    }), 10_288);
   });
 
   it("refunds only the wallet-debited order subtotal when there is no successful direct order payment", () => {
-    expect(targetRefundMinor({ orderAmountMinor: 10_000, payment: null })).toBe(10_000);
+    assert.equal(targetRefundMinor({ orderAmountMinor: 10_000, payment: null }), 10_000);
   });
 
   it("does not use an unrelated or unsuccessful payment amount", () => {
-    expect(targetRefundMinor({
+    assert.equal(targetRefundMinor({
       orderAmountMinor: 10_000,
       payment: { status: "FAILED", kind: "ORDER", amountMinor: 10_288 },
-    })).toBe(10_000);
+    }), 10_000);
   });
 });
