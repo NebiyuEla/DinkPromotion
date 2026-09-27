@@ -1,17 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type FavoriteService = {
   key: string;
   name: string;
   meta: string;
   price: string;
+  platform?: string;
+  category?: string;
 };
 
 const STORAGE_KEY = "dink-promotion-favorite-services-v1";
-const STAR_CLASS = "favorite-star-enhancer";
+const DETAIL_STAR_CLASS = "favorite-detail-star";
+const TOOLBAR_CLASS = "favorites-toolbar";
 const QUICK_CLASS = "favorites-quick-access";
+
+const PLATFORM_CLASSES: Record<string, string> = {
+  "platform-instagram": "Instagram",
+  "platform-tiktok": "TikTok",
+  "platform-youtube": "YouTube",
+  "platform-telegram": "Telegram",
+  "platform-facebook": "Facebook",
+  "platform-x": "X / Twitter",
+};
 
 function readFavorites(): FavoriteService[] {
   if (typeof window === "undefined") return [];
@@ -29,8 +41,17 @@ function writeFavorites(items: FavoriteService[]) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   } catch {
-    // Favorites are an optional convenience. The Mini App still works if storage is unavailable.
+    // Favorites are only a convenience. The ordering flow must never depend on storage.
   }
+}
+
+function platformFromRow(row: HTMLElement) {
+  const icon = row.querySelector<HTMLElement>(".service-icon");
+  if (!icon) return "";
+  for (const [className, platform] of Object.entries(PLATFORM_CLASSES)) {
+    if (icon.classList.contains(className)) return platform;
+  }
+  return "";
 }
 
 function favoriteFromRow(row: HTMLElement): FavoriteService | null {
@@ -38,19 +59,42 @@ function favoriteFromRow(row: HTMLElement): FavoriteService | null {
   if (!name) return null;
   const meta = row.querySelector<HTMLElement>(".service-copy small")?.innerText.trim() || "";
   const price = row.querySelector<HTMLElement>(".service-price b")?.innerText.trim() || "";
-  return { key: `${name}||${meta}||${price}`, name, meta, price };
+  const platform = platformFromRow(row);
+  const category = meta.split("·")[0]?.trim() || "";
+  return {
+    key: `${name}||${platform}||${category}`,
+    name,
+    meta,
+    price,
+    platform,
+    category,
+  };
+}
+
+function sameFavorite(a: FavoriteService, b: FavoriteService) {
+  if (a.key === b.key) return true;
+  if (a.name !== b.name) return false;
+  if (a.platform && b.platform && a.platform !== b.platform) return false;
+  return a.meta === b.meta || (!!a.category && a.category === b.category);
 }
 
 function findServiceRow(item: FavoriteService) {
   return Array.from(document.querySelectorAll<HTMLElement>(".service-row")).find((row) => {
     const current = favoriteFromRow(row);
-    return current?.key === item.key || (current?.name === item.name && current?.meta === item.meta);
+    return current ? sameFavorite(current, item) : false;
   });
+}
+
+function haptic() {
+  try {
+    window.Telegram?.WebApp.HapticFeedback?.impactOccurred?.("light");
+  } catch {}
 }
 
 export function FavoritesEnhancer() {
   const [favorites, setFavorites] = useState<FavoriteService[]>([]);
   const [open, setOpen] = useState(false);
+  const selectedServiceRef = useRef<FavoriteService | null>(null);
 
   const updateFavorites = useCallback((next: FavoriteService[]) => {
     setFavorites(next);
@@ -59,9 +103,12 @@ export function FavoritesEnhancer() {
 
   const toggleFavorite = useCallback((item: FavoriteService) => {
     setFavorites((current) => {
-      const exists = current.some((favorite) => favorite.key === item.key);
-      const next = exists ? current.filter((favorite) => favorite.key !== item.key) : [item, ...current];
+      const exists = current.some((favorite) => sameFavorite(favorite, item));
+      const next = exists
+        ? current.filter((favorite) => !sameFavorite(favorite, item))
+        : [item, ...current];
       writeFavorites(next);
+      haptic();
       return next;
     });
   }, []);
@@ -70,14 +117,16 @@ export function FavoritesEnhancer() {
     const clickWhenReady = (attempt = 0) => {
       const row = findServiceRow(item);
       if (row) {
+        selectedServiceRef.current = favoriteFromRow(row) || item;
         row.click();
         return;
       }
-      if (attempt < 8) window.setTimeout(() => clickWhenReady(attempt + 1), 120 + attempt * 45);
+      if (attempt < 10) window.setTimeout(() => clickWhenReady(attempt + 1), 100 + attempt * 35);
     };
 
     const existing = findServiceRow(item);
     if (existing) {
+      selectedServiceRef.current = favoriteFromRow(existing) || item;
       setOpen(false);
       existing.click();
       return;
@@ -107,64 +156,76 @@ export function FavoritesEnhancer() {
     const sync = () => {
       scheduled = false;
       const current = readFavorites();
-      const currentKeys = new Set(current.map((item) => item.key));
 
+      // Remember the exact service before the app changes from a list to its detail page.
       document.querySelectorAll<HTMLElement>(".service-row").forEach((row) => {
-        const item = favoriteFromRow(row);
-        if (!item) return;
-
-        let star = row.querySelector<HTMLElement>(`.${STAR_CLASS}`);
-        if (!star) {
-          star = document.createElement("span");
-          star.className = STAR_CLASS;
-          star.setAttribute("role", "button");
-          star.setAttribute("tabindex", "0");
-          const stop = (event: Event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          };
-          star.addEventListener("pointerdown", stop);
-          star.addEventListener("click", (event) => {
-            stop(event);
-            const latest = favoriteFromRow(row);
-            if (latest) toggleFavorite(latest);
-          });
-          star.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            stop(event);
-            const latest = favoriteFromRow(row);
-            if (latest) toggleFavorite(latest);
-          });
-          row.querySelector(".service-price")?.before(star);
-        }
-
-        const active = currentKeys.has(item.key);
-        const label = active ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`;
-        if (star.textContent !== (active ? "★" : "☆")) star.textContent = active ? "★" : "☆";
-        star.classList.toggle("active", active);
-        star.setAttribute("aria-label", label);
-        star.setAttribute("title", active ? "Remove from favorites" : "Add to favorites");
+        if (row.dataset.favoriteTracking === "1") return;
+        row.dataset.favoriteTracking = "1";
+        row.addEventListener("pointerdown", () => {
+          selectedServiceRef.current = favoriteFromRow(row);
+        }, { passive: true });
+        row.addEventListener("click", () => {
+          selectedServiceRef.current = favoriteFromRow(row);
+        });
       });
 
-      const quickCount = current.length;
-      const homePopular = Array.from(document.querySelectorAll<HTMLElement>(".section-heading h2"))
-        .find((heading) => heading.textContent?.trim() === "Popular")?.closest<HTMLElement>("section");
-      const servicesSearch = document.querySelector<HTMLElement>(".search-box");
-      const anchor = homePopular || servicesSearch;
+      // Favorites belongs on the service itself: one clean star in the service summary card.
+      const detailCard = document.querySelector<HTMLElement>(".service-title-card");
+      if (detailCard) {
+        let item = selectedServiceRef.current;
+        if (!item) {
+          const name = detailCard.querySelector<HTMLElement>("h1")?.innerText.trim() || "";
+          const price = detailCard.querySelector<HTMLElement>("p")?.innerText.trim().replace(/\s*\/\s*1,?000$/i, "") || "";
+          const platform = document.querySelector<HTMLElement>(".app-top-copy strong")?.innerText.trim() || "";
+          const category = document.querySelector<HTMLElement>(".app-top-copy span")?.innerText.trim() || "";
+          if (name) item = { key: `${name}||${platform}||${category}`, name, meta: category, price, platform, category };
+        }
 
-      if (anchor && !document.querySelector(`.${QUICK_CLASS}`)) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = QUICK_CLASS;
-        button.addEventListener("click", () => setOpen(true));
-        if (homePopular) homePopular.before(button);
-        else servicesSearch?.after(button);
+        if (item) {
+          selectedServiceRef.current = item;
+          let star = detailCard.querySelector<HTMLButtonElement>(`.${DETAIL_STAR_CLASS}`);
+          if (!star) {
+            star = document.createElement("button");
+            star.type = "button";
+            star.className = DETAIL_STAR_CLASS;
+            star.addEventListener("click", (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const latest = selectedServiceRef.current;
+              if (latest) toggleFavorite(latest);
+            });
+            detailCard.appendChild(star);
+          }
+          const active = current.some((favorite) => sameFavorite(favorite, item!));
+          star.textContent = active ? "★" : "☆";
+          star.classList.toggle("active", active);
+          star.setAttribute("aria-label", active ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`);
+          star.setAttribute("title", active ? "Remove from favorites" : "Add to favorites");
+        }
       }
 
-      const quick = document.querySelector<HTMLButtonElement>(`.${QUICK_CLASS}`);
-      if (quick) {
-        const text = `⭐ Favorites${quickCount ? `  ${quickCount}` : ""}`;
-        if (quick.textContent !== text) quick.textContent = text;
+      // Quick access appears only on the Services page, directly below Search.
+      const searchBox = document.querySelector<HTMLElement>(".search-box");
+      const oldToolbar = document.querySelector<HTMLElement>(`.${TOOLBAR_CLASS}`);
+      if (!searchBox) {
+        oldToolbar?.remove();
+      } else {
+        let toolbar = oldToolbar;
+        if (!toolbar) {
+          toolbar = document.createElement("div");
+          toolbar.className = TOOLBAR_CLASS;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = QUICK_CLASS;
+          button.addEventListener("click", () => setOpen(true));
+          toolbar.appendChild(button);
+          searchBox.after(toolbar);
+        } else if (toolbar.previousElementSibling !== searchBox) {
+          searchBox.after(toolbar);
+        }
+
+        const quick = toolbar.querySelector<HTMLButtonElement>(`.${QUICK_CLASS}`);
+        if (quick) quick.textContent = `⭐ Favorites${current.length ? ` · ${current.length}` : ""}`;
       }
     };
 
@@ -205,7 +266,7 @@ export function FavoritesEnhancer() {
                       <small>{item.meta || "Saved service"}</small>
                       {item.price && <b>{item.price} / 1K</b>}
                     </button>
-                    <button type="button" className="favorite-remove" onClick={() => updateFavorites(favorites.filter((favorite) => favorite.key !== item.key))} aria-label={`Remove ${item.name} from favorites`}>★</button>
+                    <button type="button" className="favorite-remove" onClick={() => updateFavorites(favorites.filter((favorite) => !sameFavorite(favorite, item)))} aria-label={`Remove ${item.name} from favorites`}>★</button>
                   </div>
                 ))}
               </div>
@@ -213,7 +274,7 @@ export function FavoritesEnhancer() {
               <div className="favorites-empty">
                 <span>☆</span>
                 <strong>No favorites yet</strong>
-                <p>Tap the star beside any service to keep it here for quick access.</p>
+                <p>Open a service and tap the star in its service card to save it here.</p>
                 <button type="button" onClick={() => {
                   setOpen(false);
                   const servicesNav = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav .nav-button"))
@@ -227,36 +288,53 @@ export function FavoritesEnhancer() {
       )}
 
       <style jsx global>{`
-        .favorite-star-enhancer {
-          width: 34px;
-          height: 34px;
-          flex: 0 0 34px;
-          display: inline-grid;
+        .service-title-card { position: relative; }
+        .service-title-card:has(.favorite-detail-star) { padding-right: 72px !important; }
+        .favorite-detail-star {
+          position: absolute;
+          top: 50%;
+          right: 16px;
+          transform: translateY(-50%);
+          width: 44px;
+          height: 44px;
+          display: grid;
           place-items: center;
-          border-radius: 10px;
-          font-size: 22px;
-          line-height: 1;
-          color: #7b817e;
-          background: transparent;
-          cursor: pointer;
-          user-select: none;
-        }
-        .favorite-star-enhancer.active { color: #f0a600; }
-        .favorite-star-enhancer:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-        .favorites-quick-access {
-          width: 100%;
-          min-height: 48px;
-          margin: 0 0 14px;
-          padding: 0 16px;
-          border: 1px solid var(--border, #e4e7e5);
+          border: 1px solid var(--line);
           border-radius: 14px;
-          background: var(--card, #fff);
-          color: inherit;
+          background: var(--soft);
+          color: var(--muted);
           font: inherit;
-          font-weight: 800;
-          text-align: left;
+          font-size: 25px;
+          line-height: 1;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .favorite-detail-star.active {
+          color: #e6a000;
+          background: color-mix(in srgb, #e6a000 12%, var(--surface));
+          border-color: color-mix(in srgb, #e6a000 34%, var(--line));
+        }
+        .favorite-detail-star:focus-visible { outline: 3px solid rgba(230,160,0,.22); outline-offset: 2px; }
+
+        .favorites-toolbar {
+          display: flex;
+          justify-content: flex-end;
+          margin: -2px 0 12px;
+        }
+        .favorites-quick-access {
+          min-height: 40px;
+          width: auto;
+          padding: 0 13px;
+          border: 1px solid var(--line);
+          border-radius: 12px;
+          background: var(--surface);
+          color: var(--ink);
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
           cursor: pointer;
         }
+
         .favorites-sheet-backdrop {
           position: fixed;
           inset: 0;
@@ -265,7 +343,7 @@ export function FavoritesEnhancer() {
           align-items: flex-end;
           justify-content: center;
           padding: 12px;
-          background: rgba(8, 11, 10, .38);
+          background: rgba(8, 11, 10, .42);
           backdrop-filter: blur(5px);
         }
         .favorites-sheet {
@@ -273,10 +351,11 @@ export function FavoritesEnhancer() {
           max-height: min(72vh, 680px);
           overflow: auto;
           padding: 18px;
+          border: 1px solid var(--line);
           border-radius: 22px;
-          background: var(--card, #fff);
-          color: inherit;
-          box-shadow: 0 14px 50px rgba(0,0,0,.2);
+          background: var(--surface);
+          color: var(--ink);
+          box-shadow: 0 14px 50px rgba(0,0,0,.22);
         }
         .favorites-sheet-head {
           display: flex;
@@ -285,16 +364,16 @@ export function FavoritesEnhancer() {
           gap: 12px;
           margin-bottom: 14px;
         }
-        .favorites-sheet-head small { display: block; margin-bottom: 3px; font-size: 10px; font-weight: 800; letter-spacing: .12em; opacity: .56; }
+        .favorites-sheet-head small { display: block; margin-bottom: 3px; font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--muted); }
         .favorites-sheet-head h2 { margin: 0; font-size: 22px; }
         .favorites-close {
           width: 42px;
           height: 42px;
-          border: 0;
+          border: 1px solid var(--line);
           border-radius: 12px;
-          background: rgba(127,127,127,.1);
-          color: inherit;
-          font-size: 26px;
+          background: var(--soft);
+          color: var(--ink);
+          font-size: 25px;
           line-height: 1;
           cursor: pointer;
         }
@@ -308,43 +387,44 @@ export function FavoritesEnhancer() {
         .favorite-open {
           min-width: 0;
           padding: 13px 14px;
-          border: 1px solid var(--border, #e4e7e5);
+          border: 1px solid var(--line);
           border-radius: 14px;
-          background: transparent;
-          color: inherit;
+          background: var(--surface);
+          color: var(--ink);
           text-align: left;
           cursor: pointer;
         }
         .favorite-open strong, .favorite-open small, .favorite-open b { display: block; }
         .favorite-open strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .favorite-open small { margin-top: 4px; opacity: .62; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .favorite-open b { margin-top: 7px; font-size: 13px; }
+        .favorite-open small { margin-top: 4px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .favorite-open b { margin-top: 7px; color: var(--brand-dark); font-size: 13px; }
         .favorite-remove {
-          border: 1px solid var(--border, #e4e7e5);
+          border: 1px solid var(--line);
           border-radius: 14px;
-          background: transparent;
-          color: #f0a600;
+          background: var(--soft);
+          color: #e6a000;
           font-size: 22px;
           cursor: pointer;
         }
         .favorites-empty { padding: 26px 10px 12px; text-align: center; }
-        .favorites-empty > span { display: block; margin-bottom: 8px; font-size: 44px; color: #f0a600; }
+        .favorites-empty > span { display: block; margin-bottom: 8px; font-size: 44px; color: #e6a000; }
         .favorites-empty strong { display: block; font-size: 18px; }
-        .favorites-empty p { max-width: 310px; margin: 7px auto 18px; opacity: .65; line-height: 1.5; }
+        .favorites-empty p { max-width: 310px; margin: 7px auto 18px; color: var(--muted); line-height: 1.5; }
         .favorites-empty button {
           min-height: 44px;
           padding: 0 18px;
           border: 0;
           border-radius: 12px;
-          background: #151a17;
-          color: #fff;
-          font-weight: 800;
+          background: var(--brand);
+          color: #071d0a;
+          font-weight: 700;
           cursor: pointer;
         }
-        [data-theme="dark"] .favorites-sheet,
-        [data-theme="dark"] .favorites-quick-access { background: #151a17; border-color: #2a312d; }
-        [data-theme="dark"] .favorite-open,
-        [data-theme="dark"] .favorite-remove { border-color: #2a312d; }
+
+        @media (max-width: 360px) {
+          .service-title-card:has(.favorite-detail-star) { padding-right: 64px !important; }
+          .favorite-detail-star { right: 12px; width: 40px; height: 40px; border-radius: 12px; }
+        }
       `}</style>
     </>
   );
