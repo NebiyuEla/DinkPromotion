@@ -93,10 +93,10 @@ async function ack(id, text) {
 function menu() {
   return {
     keyboard: [
-      [{ text: TEXT.open, web_app: { url: appUrl } }, { text: TEXT.favorites }],
-      [{ text: TEXT.orders }, { text: TEXT.wallet }],
-      [{ text: TEXT.topup }, { text: TEXT.offers }],
-      [{ text: TEXT.support }],
+      [{ text: TEXT.open, web_app: { url: appUrl } }],
+      [{ text: TEXT.favorites }, { text: TEXT.orders }],
+      [{ text: TEXT.wallet }, { text: TEXT.topup }],
+      [{ text: TEXT.offers }],
     ],
     resize_keyboard: true,
     is_persistent: true,
@@ -322,7 +322,7 @@ async function onMessage(message) {
   if (["/topup", "/top_up"].includes(cmd) || matches(value, ["topup", "top up", "💰 top up"])) return topStart(id, message.from);
   if (cmd === "/help" || value === "help") {
     clearFlow(id);
-    return send(id, "❓ <b>Help</b>\n\n⭐ /favorites — Open saved services\n🚀 /services — Browse services\n📦 /orders — View orders\n👛 /wallet — View wallet\n💰 /topup — Top up wallet\n🔥 /offers — View offers\n🛟 /support — Get support", menu());
+    return send(id, "❓ <b>Help</b>\n\n⭐ /favorites — Open saved services\n🚀 /services — Browse services\n📦 /orders — View orders\n👛 /wallet — View wallet\n💰 /topup — Top up wallet\n🔥 /offers — View offers", menu());
   }
 
   const flow = flows.get(String(id));
@@ -404,10 +404,9 @@ async function configure() {
     { command: "wallet", description: "View wallet" },
     { command: "topup", description: "Top up wallet" },
     { command: "offers", description: "View offers" },
-    { command: "support", description: "Get support" },
     { command: "help", description: "Help" },
   ] });
-  try { await tg("setMyDescription", { description: "Dink Promotion — services, favorites, orders, wallet, top ups, offers and support." }); } catch {}
+  try { await tg("setMyDescription", { description: "Dink Promotion — services, favorites, orders, wallet, top ups and offers." }); } catch {}
   await tg("setChatMenuButton", { menu_button: { type: "web_app", text: "Open Dink Promotion", web_app: { url: appUrl } } });
   const me = await tg("getMe");
   console.log(`Dink Promotion bot online as @${me.username || me.id}`);
