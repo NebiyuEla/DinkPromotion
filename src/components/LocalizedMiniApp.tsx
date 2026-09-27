@@ -23,15 +23,64 @@ function initialLanguage(): MiniAppLanguage {
   return telegramLanguage.startsWith("am") ? "am" : "en";
 }
 
+function launchInitData() {
+  if (typeof window === "undefined") return "";
+  const sources = [window.location.hash.replace(/^#/, ""), window.location.search.replace(/^\?/, "")];
+  for (const source of sources) {
+    if (!source) continue;
+    const value = new URLSearchParams(source).get("tgWebAppData")?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+async function prepareTelegramBridge() {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 1200) {
+    const webApp = window.Telegram?.WebApp;
+    const bridged = webApp?.initData?.trim();
+    if (bridged && webApp) {
+      webApp.ready?.();
+      webApp.expand?.();
+      return;
+    }
+
+    const fallback = launchInitData();
+    if (fallback && webApp) {
+      const activeWebApp = webApp;
+      try {
+        (activeWebApp as unknown as { initData: string }).initData = fallback;
+      } catch {
+        try {
+          Object.defineProperty(activeWebApp, "initData", { configurable: true, value: fallback });
+        } catch {
+          // MiniAppV3 will still use the Telegram bridge if it becomes ready below.
+        }
+      }
+      activeWebApp.ready?.();
+      activeWebApp.expand?.();
+      if (activeWebApp.initData?.trim()) return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 50));
+  }
+}
+
 export function LocalizedMiniApp() {
   const [language, setLanguage] = useState<MiniAppLanguage>("en");
   const [theme, setTheme] = useState<MiniAppTheme>("light");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setLanguage(initialLanguage());
-    setTheme(initialTheme());
-    setReady(true);
+    let active = true;
+    void (async () => {
+      await prepareTelegramBridge();
+      if (!active) return;
+      setLanguage(initialLanguage());
+      setTheme(initialTheme());
+      setReady(true);
+    })();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -51,6 +100,10 @@ export function LocalizedMiniApp() {
     window.Telegram?.WebApp.setHeaderColor?.(header);
     window.Telegram?.WebApp.setBackgroundColor?.(background);
   }, [theme, ready]);
+
+  if (!ready) {
+    return <div className="localized-mini-app" data-language="en" data-theme="light" aria-busy="true" />;
+  }
 
   return (
     <div className="localized-mini-app" data-language={language} data-theme={theme}>
