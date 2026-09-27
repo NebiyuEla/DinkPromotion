@@ -3,9 +3,32 @@
 /* Placeholders should be guidance text, not bold content. */
 .mini-app-v2 input::placeholder,
 .mini-app-v2 textarea::placeholder {
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
   opacity: 1 !important;
+}
+
+/* Keep the brand and page context on one quiet, readable line. */
+.mini-app-v2 .app-top {
+  grid-template-columns: 42px minmax(0, 1fr) 98px !important;
+  min-height: 66px !important;
+  gap: 10px !important;
+}
+.mini-app-v2 .brand-compact {
+  width: 42px !important;
+  height: 42px !important;
+}
+.mini-app-v2 .app-top-copy strong {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.02em !important;
+}
+.mini-app-v2 .app-top-copy span {
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
 }
 
 .mini-app-v2 .field-label > input,
