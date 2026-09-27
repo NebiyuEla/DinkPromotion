@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { detectCategory, detectPlatform, getPrmServices, isSupportedPrmType } from "./prm4u";
+import { curatePrmCatalog, detectCategory, detectPlatform, getPrmServices, isSupportedPrmType } from "./prm4u";
 import { providerRateToEtbMinor } from "./pricing";
 
 export type ServiceSyncResult = {
@@ -9,8 +9,8 @@ export type ServiceSyncResult = {
   unpublished: number;
 };
 
-const CUSTOMER_PLATFORMS = new Set(["Instagram", "TikTok", "YouTube", "Telegram", "Facebook", "X / Twitter"]);
 let activeSync: Promise<ServiceSyncResult> | null = null;
+const POSTGRES_INT_MAX = 2_147_483_647;
 
 function cleanName(name: string) {
   return name.replace(/\s+/g, " ").replace(/^[-|•\s]+|[-|•\s]+$/g, "").trim().slice(0, 120) || "Social media service";
@@ -18,7 +18,8 @@ function cleanName(name: string) {
 
 function quantity(value: string) {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(1, Math.trunc(parsed)) : 1;
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(POSTGRES_INT_MAX, Math.max(1, Math.trunc(parsed)));
 }
 
 type ProviderMetadata = {
@@ -82,14 +83,16 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
 
     const compatible = isSupportedPrmType(item.type);
     const platform = detectPlatform(item.name, item.category);
+    const minQuantity = quantity(item.min);
+    const maxQuantity = Math.max(minQuantity, quantity(item.max));
     const metadata: ProviderMetadata = {
       providerServiceId,
       providerName: item.name,
       providerType: item.type,
       providerCategory: item.category,
       providerRateUsd: item.rate,
-      minQuantity: quantity(item.min),
-      maxQuantity: quantity(item.max),
+      minQuantity,
+      maxQuantity,
       refill: Boolean(item.refill),
       cancel: Boolean(item.cancel),
       compatible,
@@ -103,9 +106,10 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
         ...metadata,
         displayName: cleanName(item.name),
         platform,
-        category: detectCategory(item.name),
+        category: detectCategory(item.name, item.category),
         pricePerThousandMinor,
-        active: compatible && pricePerThousandMinor > 0 && CUSTOMER_PLATFORMS.has(platform),
+        // Publication is decided after the entire provider catalog is ranked.
+        active: false,
         lastProviderSyncAt: now,
       });
       continue;
@@ -166,26 +170,72 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
     `;
   }
 
-  const incompatible = await prisma.service.updateMany({
-    where: { provider: "PRM4U", compatible: false, active: true },
-    data: { active: false },
-  });
-  const removed = providerIds.length
+  // Keep the full PRM4U catalog in admin, but publish only a concise customer
+  // selection: at most three differentiated options per platform/service type.
+  // Explicit cheap/bot/fake services remain eligible and are labeled honestly.
+  const curated = curatePrmCatalog(services);
+  const selectedIds = curated.map((item) => item.providerServiceId);
+
+  const selectedRows = selectedIds.length
+    ? await prisma.service.findMany({
+        where: { provider: "PRM4U", providerServiceId: { in: selectedIds } },
+        select: { providerServiceId: true, pricePerThousandMinor: true, active: true },
+      })
+    : [];
+  const selectedById = new Map(selectedRows.map((item) => [item.providerServiceId, item]));
+
+  const pruned = selectedIds.length
     ? await prisma.service.updateMany({
-        where: { provider: "PRM4U", providerServiceId: { notIn: providerIds }, active: true },
+        where: { provider: "PRM4U", active: true, providerServiceId: { notIn: selectedIds } },
         data: { active: false },
       })
-    : { count: 0 };
+    : await prisma.service.updateMany({
+        where: { provider: "PRM4U", active: true },
+        data: { active: false },
+      });
 
-  // This write is the completion marker. A terminated/partial sync never advances
-  // catalog freshness, so a later request safely retries instead of accepting a
-  // half-refreshed provider catalog as current.
+  let selectedDisabledForPrice = 0;
+  if (curated.length) {
+    const catalogPayload = JSON.stringify(
+      curated.map((item) => {
+        const current = selectedById.get(item.providerServiceId);
+        const active = Boolean(current && current.pricePerThousandMinor > 0);
+        if (current?.active && !active) selectedDisabledForPrice += 1;
+        return { ...item, active };
+      }),
+    );
+
+    await prisma.$executeRaw`
+      UPDATE public."Service" AS s
+      SET
+        "displayName" = x."displayName",
+        platform = x.platform,
+        category = x.category,
+        "sortOrder" = x."sortOrder",
+        active = x.active,
+        "updatedAt" = NOW()
+      FROM jsonb_to_recordset(${catalogPayload}::jsonb) AS x(
+        "providerServiceId" integer,
+        platform text,
+        category text,
+        tier text,
+        "displayName" text,
+        "sortOrder" integer,
+        active boolean
+      )
+      WHERE s.provider = 'PRM4U'
+        AND s."providerServiceId" = x."providerServiceId"
+    `;
+  }
+
+  // This all-row write is the completion marker. Any sync that dies before here
+  // leaves at least one older row behind and is considered stale on the next run.
   await prisma.service.updateMany({
     where: { provider: "PRM4U" },
     data: { lastProviderSyncAt: now },
   });
 
-  const unpublished = incompatible.count + removed.count;
+  const unpublished = pruned.count + selectedDisabledForPrice;
   const updated = changedRows.length;
   if (actorId) {
     await prisma.auditLog.create({
@@ -194,7 +244,7 @@ async function runSync(actorId?: string | null): Promise<ServiceSyncResult> {
         action: "provider.services.sync",
         entity: "Provider",
         entityId: "PRM4U",
-        metadata: { received: services.length, created, updated, unpublished },
+        metadata: { received: services.length, created, updated, unpublished, selected: curated.length },
       },
     });
   }
@@ -211,11 +261,11 @@ export function syncPrmServices(actorId?: string | null) {
 }
 
 export async function isPrmCatalogStale(maxAgeMs = 10 * 60 * 1000) {
-  const latest = await prisma.service.findFirst({
+  const freshness = await prisma.service.aggregate({
     where: { provider: "PRM4U" },
-    orderBy: { lastProviderSyncAt: "desc" },
-    select: { lastProviderSyncAt: true },
+    _min: { lastProviderSyncAt: true },
+    _count: { _all: true },
   });
-  if (!latest) return true;
-  return Date.now() - latest.lastProviderSyncAt.getTime() > maxAgeMs;
+  if (freshness._count._all === 0 || !freshness._min.lastProviderSyncAt) return true;
+  return Date.now() - freshness._min.lastProviderSyncAt.getTime() > maxAgeMs;
 }

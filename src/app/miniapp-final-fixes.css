@@ -1,0 +1,124 @@
+/* Final service-detail, input-weight and dark-mode corrections. */
+
+/* Placeholders should be guidance text, not bold content. */
+.mini-app-v2 input::placeholder,
+.mini-app-v2 textarea::placeholder {
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  opacity: 1 !important;
+}
+
+/* Keep the brand and page context on one quiet, readable line. */
+.mini-app-v2 .app-top {
+  grid-template-columns: 42px minmax(0, 1fr) 98px !important;
+  min-height: 66px !important;
+  gap: 10px !important;
+}
+.mini-app-v2 .brand-compact {
+  width: 42px !important;
+  height: 42px !important;
+}
+.mini-app-v2 .app-top-copy strong {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.02em !important;
+}
+.mini-app-v2 .app-top-copy span {
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+.mini-app-v2 .field-label > input,
+.mini-app-v2 .search-box input,
+.mini-app-v2 .money-input input,
+.mini-app-v2 .mobile-field input {
+  font-weight: 500 !important;
+}
+
+/* Keep the entered quantity prominent without making its placeholder heavy. */
+.mini-app-v2 .quantity-control input {
+  font-weight: 700 !important;
+}
+.mini-app-v2 .quantity-control input::placeholder {
+  font-weight: 400 !important;
+}
+
+/* Service form labels should stay readable in both themes. */
+.mini-app-v2 .field-label {
+  color: var(--muted) !important;
+}
+
+/* Complete dark-mode coverage for inner controls that previously stayed light. */
+html[data-theme="dark"] .mini-app-v2 .quantity-control button {
+  background: var(--soft) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+
+html[data-theme="dark"] .mini-app-v2 .quantity-control input,
+html[data-theme="dark"] .mini-app-v2 .field-label > input,
+html[data-theme="dark"] .mini-app-v2 .money-input input,
+html[data-theme="dark"] .mini-app-v2 .mobile-field input,
+html[data-theme="dark"] .mini-app-v2 .filter-row select {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+}
+
+html[data-theme="dark"] .mini-app-v2 .price-total {
+  background: #14251a !important;
+  border-color: #285a36 !important;
+}
+html[data-theme="dark"] .mini-app-v2 .price-total span {
+  color: #9ba7a1 !important;
+}
+html[data-theme="dark"] .mini-app-v2 .price-total strong {
+  color: #59e56a !important;
+}
+
+html[data-theme="dark"] .mini-app-v2 .direct-method.selected {
+  background: #14251a !important;
+  border-color: #38cf4b !important;
+  box-shadow: 0 0 0 1px #38cf4b inset !important;
+}
+
+html[data-theme="dark"] .mini-app-v2 :where(
+  .detail-facts,
+  .trust-strip,
+  .payment-option,
+  .chip,
+  .filter-row select
+) {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+
+html[data-theme="dark"] .mini-app-v2 .chip.active {
+  background: #1d2a20 !important;
+  border-color: #3ad84c !important;
+  color: #59e56a !important;
+}
+
+html[data-theme="dark"] .mini-app-v2 .trust-strip {
+  border-top-color: var(--line) !important;
+}
+
+html[data-theme="dark"] .mini-app-v2 .service-title-card,
+html[data-theme="dark"] .mini-app-v2 .order-form {
+  box-shadow: none !important;
+}
+
+/* Remove light flashes when native autofill or Telegram restores input values. */
+html[data-theme="dark"] .mini-app-v2 input:-webkit-autofill,
+html[data-theme="dark"] .mini-app-v2 input:-webkit-autofill:hover,
+html[data-theme="dark"] .mini-app-v2 input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset !important;
+  box-shadow: 0 0 0 1000px var(--surface) inset !important;
+  caret-color: var(--brand) !important;
+}

@@ -19,6 +19,8 @@ jobs:
           node-version: 20
       - run: npm install --no-audit --no-fund
       - run: npx prisma generate
+      - run: node --check bot/index.js
+      - run: node --check bot/worker.js
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build

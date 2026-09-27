@@ -7,7 +7,7 @@ Production-oriented Telegram Mini App for Dink Promotion. The customer-facing ap
 - Telegram Mini App authentication with server-side `initData` validation.
 - HttpOnly signed sessions and admin access controlled by Telegram IDs.
 - PRM4U API v2 integration: service sync, order placement, status sync, refill, cancel and provider balance.
-- Curated-service workflow: synced services are **not** published automatically. Admin sets Dink pricing and enables selected services.
+- Curated-service workflow: the full PRM4U catalog remains available to admins while the customer catalog automatically exposes a concise Ethiopia-focused selection.
 - Customer flows: Home, Services, service details, order creation, direct Telebirr/CBE Birr payment, Dink Wallet payment, My Orders, order tracking, refill/cancel where supported, Wallet, Profile and Support.
 - Chapa Telebirr and CBE Birr direct-charge requests, signed webhook verification, and mandatory server-side transaction verification before fulfillment. Older hosted-checkout links remain available for existing pending payments.
 - Idempotent wallet top-ups and wallet debits/refunds.
@@ -45,7 +45,7 @@ Optional:
 - `PRICING_USD_ETB_RATE`
 - `DEFAULT_MARKUP_PERCENT`
 
-If the pricing variables are supplied, newly imported PRM4U services receive a suggested Dink price but still remain unpublished. Without them, imported services start at `0` and cannot be enabled until an admin sets a customer price.
+If the pricing variables are supplied, newly imported PRM4U services receive a suggested Dink price. Customer publication is still controlled by the catalog curation rules and a valid customer price.
 
 ## Database
 
@@ -83,7 +83,11 @@ Set the same webhook secret in `CHAPA_WEBHOOK_SECRET`. Dink verifies the webhook
 
 ## PRM4U service sync
 
-Open `/admin` from an admin Telegram account and choose **Sync PRM4U services**. Only PRM4U service types compatible with the simple link + quantity order form can be published. Unsupported service types remain visible to admins but cannot be enabled.
+Open `/admin` from an admin Telegram account and choose **Sync PRM4U services**. Only PRM4U service types compatible with the simple link + quantity order form can be customer-orderable. Unsupported or filtered services remain available to admins for review.
+
+The customer catalog groups services by platform and action and exposes at most a few differentiated choices instead of raw panel duplicates. Customer-facing tiers are **Cheap / Bot**, **Cheap**, **Standard**, **Fast**, **Stable**, and **Refill** where available. Cheap, bot, or fake-style engagement is intentionally retained when PRM4U supplies it and is labeled transparently rather than being presented as organic traffic.
+
+The curation removes categories that do not fit Dink Promotion's current Ethiopia-focused retail catalog, including adult/NSFW, gambling/casino, crypto promotion, review manipulation, app installs, SEO/backlinks, monetization/watch-time shortcuts, account-verification services, password/login-required services, custom comment lists, and irrelevant country-specific targeting. Wholesale-only services with impractical customer minimums are also hidden from the public catalog while remaining visible to admins.
 
 ## Background order status sync
 

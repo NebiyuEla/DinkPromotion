@@ -184,6 +184,13 @@ model DiscountRule {
   updatedAt DateTime @updatedAt
 }
 
+model PricingConfig {
+  id          Int      @id @default(1)
+  usdCostRate Decimal? @db.Decimal(12, 4)
+  sellRate    Decimal  @default(194) @db.Decimal(12, 4)
+  updatedAt   DateTime @updatedAt
+}
+
 model AuditLog {
   id        String   @id @default(cuid())
   actorId   String?
