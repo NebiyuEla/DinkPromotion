@@ -93,7 +93,7 @@ async function ack(id, text) {
 function menu() {
   return {
     keyboard: [
-      [{ text: TEXT.open, web_app: { url: appUrl } }],
+      [{ text: TEXT.open }],
       [{ text: TEXT.favorites }, { text: TEXT.orders }],
       [{ text: TEXT.wallet }, { text: TEXT.topup }],
       [{ text: TEXT.offers }],
@@ -313,6 +313,12 @@ async function onMessage(message) {
   const cmd = value.startsWith("/") ? value.split(/\s+/, 1)[0].split("@", 1)[0] : "";
 
   if (["/start", "/menu"].includes(cmd)) return welcome(message);
+  if (matches(value, ["open app", "🚀 open app"])) {
+    clearFlow(id);
+    return send(id, "🚀 <b>Open Dink Promotion</b>\n\nTap the button below to continue securely in Telegram.", {
+      inline_keyboard: [[appButton("🚀 Open Dink Promotion")]],
+    });
+  }
   if (cmd === "/favorites" || cmd === "/favourites" || matches(value, ["favorites", "favourites", "favorite", "favourite", "⭐ favorites", "⭐ favourites"])) return showFavorites(id);
   if (cmd === "/services" || matches(value, ["services", "🚀 services"])) return showServices(id);
   if (cmd === "/orders" || matches(value, ["orders", "my orders", "📦 orders"])) return showOrders(id, message.from);
