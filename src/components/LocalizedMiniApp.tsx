@@ -39,7 +39,7 @@ async function prepareTelegramBridge() {
   while (Date.now() - startedAt < 1200) {
     const webApp = window.Telegram?.WebApp;
     const bridged = webApp?.initData?.trim();
-    if (bridged) {
+    if (bridged && webApp) {
       webApp.ready?.();
       webApp.expand?.();
       return;
@@ -47,18 +47,19 @@ async function prepareTelegramBridge() {
 
     const fallback = launchInitData();
     if (fallback && webApp) {
+      const activeWebApp = webApp;
       try {
-        (webApp as unknown as { initData: string }).initData = fallback;
+        (activeWebApp as unknown as { initData: string }).initData = fallback;
       } catch {
         try {
-          Object.defineProperty(webApp, "initData", { configurable: true, value: fallback });
+          Object.defineProperty(activeWebApp, "initData", { configurable: true, value: fallback });
         } catch {
           // MiniAppV3 will still use the Telegram bridge if it becomes ready below.
         }
       }
-      webApp.ready?.();
-      webApp.expand?.();
-      if (webApp.initData?.trim()) return;
+      activeWebApp.ready?.();
+      activeWebApp.expand?.();
+      if (activeWebApp.initData?.trim()) return;
     }
 
     await new Promise((resolve) => window.setTimeout(resolve, 50));
