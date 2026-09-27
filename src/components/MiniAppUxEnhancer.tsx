@@ -3,62 +3,7 @@
 import { useEffect } from "react";
 
 const SERVICE_CACHE_KEY = "dink-promotion-service-cache-v2";
-const UX_VERSION_KEY = "dink-promotion-ui-v3";
-
-function digitsOnly(value: string) {
-  return value.replace(/\D/g, "");
-}
-
-function setupQuantityInput(input: HTMLInputElement) {
-  if (input.dataset.dinkQuantityReady === "1") return;
-  input.dataset.dinkQuantityReady = "1";
-  input.type = "text";
-  input.inputMode = "numeric";
-  input.autocomplete = "off";
-
-  const min = Number(input.getAttribute("min") || 0);
-  const max = Number(input.getAttribute("max") || Number.MAX_SAFE_INTEGER);
-
-  const syncDisplay = () => {
-    const digits = digitsOnly(input.value);
-    if (!digits) return;
-    let value = Number(digits);
-    if (!Number.isFinite(value)) return;
-    if (value > max) value = max;
-    const formatted = value.toLocaleString("en-US");
-    if (input.value !== formatted) input.value = formatted;
-  };
-
-  const onInput = () => {
-    const digits = digitsOnly(input.value);
-    if (!digits) return;
-    const parsed = Number(digits);
-    if (Number.isFinite(parsed) && parsed > max) {
-      input.value = String(max);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      return;
-    }
-    requestAnimationFrame(syncDisplay);
-  };
-
-  const onBlur = () => {
-    const digits = digitsOnly(input.value);
-    if (!digits) return;
-    let parsed = Number(digits);
-    if (!Number.isFinite(parsed)) return;
-    parsed = Math.max(min, Math.min(max, parsed));
-    const raw = String(parsed);
-    if (digits !== raw) {
-      input.value = raw;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    requestAnimationFrame(syncDisplay);
-  };
-
-  input.addEventListener("input", onInput);
-  input.addEventListener("blur", onBlur);
-  requestAnimationFrame(syncDisplay);
-}
+const UX_VERSION_KEY = "dink-promotion-ui-v4";
 
 function filterTypeOptions() {
   const panel = document.querySelector<HTMLElement>(".type-filter-panel");
@@ -121,7 +66,8 @@ export function MiniAppUxEnhancer() {
     let scheduled = false;
     const enhance = () => {
       scheduled = false;
-      document.querySelectorAll<HTMLInputElement>(".quantity-control input").forEach(setupQuantityInput);
+      // Do not mutate controlled quantity input values here. React owns the
+      // quantity state and recalculates the service total on every change.
       filterTypeOptions();
     };
     const schedule = () => {
