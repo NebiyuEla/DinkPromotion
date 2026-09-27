@@ -1,0 +1,141 @@
+.v3-runtime-toast {
+  --v3-swipe-x: 0px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 9px;
+  transform: translateX(-50%) translateX(var(--v3-swipe-x)) !important;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease;
+  will-change: transform, opacity;
+  animation: v3-runtime-toast-in .26s cubic-bezier(.2,.8,.2,1) both !important;
+}
+
+@keyframes v3-runtime-toast-in {
+  from { opacity: 0; translate: 0 -10px; scale: .98; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+
+.v3-runtime-toast-dragging {
+  transition: none !important;
+  cursor: grabbing;
+}
+
+.v3-runtime-toast-leaving {
+  pointer-events: none;
+}
+
+.v3-runtime-toast-logo {
+  width: 34px;
+  height: 34px;
+  display: block;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.v3-runtime-toast-copy {
+  min-width: 0;
+  color: inherit;
+  font: inherit;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.v3-runtime-toast-close {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: currentColor;
+  display: grid;
+  place-items: center;
+  padding: 0 0 2px;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.v3-runtime-toast-close:active {
+  transform: scale(.94);
+}
+
+.v3-toast-warning {
+  color: var(--v3-warning);
+  background: var(--v3-warning-soft);
+  border-color: color-mix(in srgb, var(--v3-warning) 28%, var(--v3-line));
+}
+
+.v3-toast:not(.v3-runtime-toast),
+.v3-offline {
+  pointer-events: none;
+}
+
+.v3-menu-list .v3-menu-card.static:first-child .v3-menu-icon {
+  background: #fff url("/dink-promotion-mark.png") center / 34px 34px no-repeat;
+  border: 1px solid var(--v3-line);
+}
+
+.v3-menu-list .v3-menu-card.static:first-child .v3-menu-icon svg {
+  display: none;
+}
+
+.v3-payment-pending::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: #fff url("/dink-promotion-mark.png") center / cover no-repeat;
+  border: 1px solid var(--v3-line);
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.v3-pending-list > .v3-pending-row > svg:first-child {
+  display: none;
+}
+
+.v3-pending-list > .v3-pending-row::before {
+  content: "";
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  background: #fff url("/dink-promotion-mark.png") center / cover no-repeat;
+  border: 1px solid var(--v3-line);
+}
+
+html[data-theme="dark"] .v3-runtime-toast-logo,
+html[data-theme="dark"] .v3-payment-pending::before,
+html[data-theme="dark"] .v3-pending-list > .v3-pending-row::before,
+html[data-theme="dark"] .v3-menu-list .v3-menu-card.static:first-child .v3-menu-icon {
+  border-color: #35423b;
+}
+
+@media (max-width: 430px) {
+  .v3-runtime-toast {
+    width: min(calc(100% - 20px), 470px);
+    top: max(10px, calc(env(safe-area-inset-top) + 6px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v3-runtime-toast {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .v3-runtime-toast-close {
+    transition: none !important;
+  }
+}
