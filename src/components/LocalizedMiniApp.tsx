@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MiniAppRuntimePolish } from "./MiniAppRuntimePolish";
 import { MiniAppV3, type MiniAppLanguage, type MiniAppTheme } from "./MiniAppV3";
 
 const LANGUAGE_KEY = "dink-promotion-language";
@@ -58,6 +59,7 @@ export function LocalizedMiniApp() {
         onToggleLanguage={() => setLanguage((current) => current === "en" ? "am" : "en")}
         onToggleTheme={() => setTheme((current) => current === "dark" ? "light" : "dark")}
       />
+      <MiniAppRuntimePolish />
     </div>
   );
 }
