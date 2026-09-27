@@ -11,8 +11,6 @@ async function rememberPaymentMobile(userId: string, mobile: string) {
       data: { paymentMobile: mobile },
     });
   } catch (error) {
-    // A Chapa charge may already be awaiting approval. Never turn a successful
-    // initiation into an API error just because this convenience write failed.
     console.warn("Could not remember payment mobile after wallet charge initiation", error);
   }
 }
@@ -100,16 +98,18 @@ export async function startWalletTopUp(input: {
       };
     }
 
-    const result = await startWalletCharge({
-      paymentId: existing.id,
-      txRef: retryTxRef,
-      amountMinor: input.amountMinor,
-      mobile: normalizedMobile,
-      method: input.method,
-      firstName: input.user.firstName,
-      lastName: input.user.lastName,
-    });
-    await rememberPaymentMobile(input.user.id, normalizedMobile);
+    const [result] = await Promise.all([
+      startWalletCharge({
+        paymentId: existing.id,
+        txRef: retryTxRef,
+        amountMinor: input.amountMinor,
+        mobile: normalizedMobile,
+        method: input.method,
+        firstName: input.user.firstName,
+        lastName: input.user.lastName,
+      }),
+      rememberPaymentMobile(input.user.id, normalizedMobile),
+    ]);
     return result;
   }
 
@@ -121,15 +121,17 @@ export async function startWalletTopUp(input: {
       amountMinor: input.amountMinor,
     },
   });
-  const result = await startWalletCharge({
-    paymentId: payment.id,
-    txRef: payment.txRef,
-    amountMinor: input.amountMinor,
-    mobile: normalizedMobile,
-    method: input.method,
-    firstName: input.user.firstName,
-    lastName: input.user.lastName,
-  });
-  await rememberPaymentMobile(input.user.id, normalizedMobile);
+  const [result] = await Promise.all([
+    startWalletCharge({
+      paymentId: payment.id,
+      txRef: payment.txRef,
+      amountMinor: input.amountMinor,
+      mobile: normalizedMobile,
+      method: input.method,
+      firstName: input.user.firstName,
+      lastName: input.user.lastName,
+    }),
+    rememberPaymentMobile(input.user.id, normalizedMobile),
+  ]);
   return result;
 }
