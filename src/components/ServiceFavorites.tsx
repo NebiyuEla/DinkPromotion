@@ -52,15 +52,17 @@ function fromRow(row: HTMLElement): FavoriteService | null {
   const meta = row.querySelector<HTMLElement>(".service-copy small")?.innerText.trim() || "";
   const price = row.querySelector<HTMLElement>(".service-price b")?.innerText.trim() || "";
   const platform = platformFromRow(row);
-  const category = meta.split("·")[0]?.trim() || "";
-  return { key: `${name}||${platform}||${category}`, name, meta, price, platform, category };
+  const category = row.dataset.serviceCategory || "";
+  const serviceId = row.dataset.serviceId;
+  return { key: serviceId ? `service:${serviceId}` : `${name}||${platform}||${category}`, name, meta, price, platform, category };
 }
 
 function sameFavorite(a: FavoriteService, b: FavoriteService) {
   if (a.key === b.key) return true;
+  if (a.key.startsWith("service:") && b.key.startsWith("service:")) return false;
   if (a.name !== b.name) return false;
   if (a.platform && b.platform && a.platform !== b.platform) return false;
-  return a.meta === b.meta || (!!a.category && a.category === b.category);
+  return (!!a.price && a.price === b.price) || a.meta === b.meta;
 }
 
 function findRow(item: FavoriteService) {
@@ -149,24 +151,21 @@ export function ServiceFavorites() {
         row.addEventListener("click", remember);
       });
 
-      // Favorites is a first-class filter action, beside All — never a floating card.
-      const filters = document.querySelector<HTMLElement>(".platform-filter");
-      if (filters) {
-        let button = filters.querySelector<HTMLButtonElement>(`.${FILTER_CLASS}`);
+      const search = document.querySelector<HTMLElement>(".search-box");
+      if (search) {
+        let button = search.querySelector<HTMLButtonElement>(`.${FILTER_CLASS}`);
         if (!button) {
           button = document.createElement("button");
           button.type = "button";
-          button.className = `platform-filter-button ${FILTER_CLASS}`;
-          button.setAttribute("aria-pressed", "false");
+          button.className = FILTER_CLASS;
           button.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
             setOpen(true);
           });
-          const all = filters.querySelector<HTMLElement>(".platform-filter-button");
-          all?.insertAdjacentElement("afterend", button);
+          search.appendChild(button);
         }
-        button.textContent = `⭐ Favorites${current.length ? ` · ${current.length}` : ""}`;
+        button.textContent = `☆ Saved${current.length ? ` · ${current.length}` : ""}`;
       }
 
       const detail = document.querySelector<HTMLElement>(".service-title-card");
@@ -176,9 +175,9 @@ export function ServiceFavorites() {
       if (!item) {
         const name = detail.querySelector<HTMLElement>("h1")?.innerText.trim() || "";
         const price = detail.querySelector<HTMLElement>("p")?.innerText.trim().replace(/\s*\/\s*1,?000$/i, "") || "";
-        const platform = document.querySelector<HTMLElement>(".app-top-copy strong")?.innerText.trim() || "";
-        const category = document.querySelector<HTMLElement>(".app-top-copy span")?.innerText.trim() || "";
-        if (name) item = { key: `${name}||${platform}||${category}`, name, meta: category, price, platform, category };
+        const platform = document.querySelector<HTMLElement>(".app-top-copy span")?.innerText.trim() || "";
+        const serviceId = detail.dataset.serviceId;
+        if (name) item = { key: serviceId ? `service:${serviceId}` : `${name}||${platform}`, name, meta: platform, price, platform };
       }
       if (!item) return;
       selectedRef.current = item;
@@ -252,15 +251,15 @@ export function ServiceFavorites() {
         </div>
       )}
       <style jsx global>{`
-        .platform-filter:has(.favorites-filter-button) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        .platform-filter:has(.favorites-filter-button) > .platform-filter-button:first-child { grid-column: auto !important; }
-        .favorites-filter-button { color: var(--ink) !important; background: var(--surface) !important; border-color: var(--line) !important; font-weight: 700 !important; }
+        .search-box:has(.favorites-filter-button) { position: relative; }
+        .search-box:has(.favorites-filter-button) input { padding-right: 100px !important; }
+        .favorites-filter-button { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); min-height: 34px; padding: 0 10px; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
         .favorites-filter-button:active { background: var(--soft) !important; }
 
         .service-title-card { position: relative; }
         .service-title-card:has(.favorite-detail-star) { padding-right: 72px !important; }
-        .favorite-detail-star { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); color: var(--muted); font: inherit; font-size: 25px; line-height: 1; cursor: pointer; }
-        .favorite-detail-star.active { color: #e5a000; background: color-mix(in srgb, #e5a000 12%, var(--surface)); border-color: color-mix(in srgb, #e5a000 35%, var(--line)); }
+        .favorite-detail-star { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; font-size: 24px; line-height: 1; cursor: pointer; }
+        .favorite-detail-star.active { color: var(--brand-dark); background: var(--soft); border-color: var(--brand-dark); }
 
         .favorites-sheet-backdrop { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: flex-end; justify-content: center; padding: 12px; background: rgba(8,11,10,.44); backdrop-filter: blur(5px); }
         .favorites-sheet { width: min(100%, 520px); max-height: min(72vh, 680px); overflow: auto; padding: 18px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); color: var(--ink); box-shadow: 0 14px 50px rgba(0,0,0,.22); }
@@ -275,9 +274,9 @@ export function ServiceFavorites() {
         .favorite-open strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .favorite-open small { margin-top: 4px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .favorite-open b { margin-top: 7px; color: var(--brand-dark); font-size: 13px; }
-        .favorite-remove { border: 1px solid var(--line); border-radius: 14px; background: var(--soft); color: #e5a000; font-size: 22px; cursor: pointer; }
+        .favorite-remove { border: 1px solid var(--line); border-radius: 14px; background: var(--soft); color: var(--brand-dark); font-size: 22px; cursor: pointer; }
         .favorites-empty { padding: 26px 10px 12px; text-align: center; }
-        .favorites-empty > span { display: block; margin-bottom: 8px; color: #e5a000; font-size: 44px; }
+        .favorites-empty > span { display: block; margin-bottom: 8px; color: var(--brand-dark); font-size: 44px; }
         .favorites-empty strong { display: block; font-size: 18px; }
         .favorites-empty p { max-width: 310px; margin: 7px auto 18px; color: var(--muted); line-height: 1.5; }
         .favorites-empty button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--ink); color: var(--surface); font-weight: 700; cursor: pointer; }

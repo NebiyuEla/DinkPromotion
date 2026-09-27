@@ -1,7 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { discountedServicePrice, getDiscountMap } from "@/lib/discounts";
-import { detectPlatform } from "@/lib/prm4u";
+import { detectCategory, detectPlatform } from "@/lib/prm4u";
 import { serializeService } from "@/lib/serializers";
 import { isPrmCatalogStale, syncPrmServices } from "@/lib/service-sync";
 
@@ -60,7 +60,9 @@ export async function GET(request: NextRequest) {
   // metadata. Keep those rows visible to admins, but never show a YouTube-tagged
   // provider category as TikTok/Instagram (or another conflicting platform) to a customer.
   const visibleServices = services.filter(
-    (service) => service.minQuantity <= customerMinimumLimit(service.category) && !hasProviderPlatformConflict(service),
+    (service) => service.minQuantity <= customerMinimumLimit(detectCategory(service.providerName, service.providerCategory))
+      && !hasProviderPlatformConflict(service)
+      && !/\b(?:page\s*)?reviews?\b/i.test(`${service.providerName} ${service.providerCategory}`),
   );
 
   const customerServices = visibleServices.map((service) => {
@@ -68,6 +70,7 @@ export async function GET(request: NextRequest) {
     const discounted = discountedServicePrice(service.pricePerThousandMinor, service.platform, discounts);
     return {
       ...serialized,
+      category: detectCategory(service.providerName, service.providerCategory),
       pricePerThousandMinor: discounted.priceMinor,
       originalPricePerThousandMinor: service.pricePerThousandMinor,
       discountPercent: discounted.percent,

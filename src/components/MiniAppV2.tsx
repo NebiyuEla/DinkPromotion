@@ -292,7 +292,7 @@ export function MiniAppV2() {
     return () => window.removeEventListener("focus", onFocus);
   }, [user, loadPrivate]);
 
-  const categories = useMemo(() => ["All", ...Array.from(new Set(services.map((item) => item.category))).sort()], [services]);
+  const categories = useMemo(() => ["All", ...Array.from(new Set(services.filter((item) => platform === "All" || item.platform === platform).map((item) => item.category))).sort()], [services, platform]);
   const visibleServices = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return services.filter((item) => {
@@ -726,7 +726,7 @@ function HomeView({ user, authState, featured, services, servicesState, retrySer
 }) {
   return (
     <>
-      <AppTop title="Dink Promotion" subtitle={user ? `Hi, ${user.firstName}` : "Promotion made simple"} />
+      <AppTop title="Dink Promotion" subtitle={user ? `Hi, ${user.firstName}` : undefined} />
       <section className="hero-card compact-hero">
         <p className="eyebrow">DINK PROMOTION</p>
         <h1>Promote in a few taps.</h1>
@@ -748,7 +748,7 @@ function HomeView({ user, authState, featured, services, servicesState, retrySer
       </section>
 
       <section className="section-block compact-section">
-        <SectionHeader title="Popular" action="See all" onAction={() => openServices()} />
+        <SectionHeader title="Explore services" action="See all" onAction={() => openServices()} />
         <div className="service-stack">{featured.map((service) => <ServiceRow key={service.id} service={service} onClick={() => openService(service)} />)}</div>
         {servicesState === "loading" ? <LoadingState /> : servicesState === "error" ? <ErrorState retry={retryServices} /> : !services.length && <EmptyState title="No services yet" text="Check back shortly." />}
       </section>
@@ -775,7 +775,7 @@ function ServicesView({ services, allServices, servicesState, retryServices, pla
 
   return (
     <>
-      <AppTop title="Services" subtitle={`${services.length} available`} />
+      <AppTop title="Dink Promotion" subtitle={`Services · ${services.length} available`} />
       <div className="search-box"><Search size={18} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" /></div>
 
       <div className="platform-filter" aria-label="Platforms">
@@ -789,7 +789,7 @@ function ServicesView({ services, allServices, servicesState, retryServices, pla
 
       <div className="type-filter-wrap">
         <button type="button" className={`type-filter-trigger ${typesOpen ? "open" : ""}`} onClick={() => setTypesOpen((value) => !value)} aria-expanded={typesOpen}>
-          <span><small>Type</small><strong>{category}</strong></span>
+          <span><small>Service type</small><strong>{category}</strong></span>
           <ChevronDown size={18} />
         </button>
         {typesOpen && (
@@ -821,9 +821,9 @@ function ServicesView({ services, allServices, servicesState, retryServices, pla
 
 function ServiceRow({ service, onClick }: { service: Service; onClick: () => void }) {
   return (
-    <button type="button" className="service-row" onClick={onClick}>
+    <button type="button" className="service-row" data-service-id={service.id} data-service-category={service.category} onClick={onClick}>
       <span className={`service-icon ${platformClass(service.platform)}`}><PlatformIcon platform={service.platform} /></span>
-      <span className="service-copy"><strong>{service.name}</strong><small>{service.category} · {service.minQuantity.toLocaleString()}–{service.maxQuantity.toLocaleString()}</small></span>
+      <span className="service-copy"><strong>{service.name}</strong><small>{service.minQuantity.toLocaleString()}–{service.maxQuantity.toLocaleString()} units</small></span>
       <span className="service-price"><b>{money(service.pricePerThousandMinor)}</b><small>/ 1K</small></span>
       <ChevronRight size={18} />
     </button>
@@ -853,8 +853,8 @@ function ServiceDetail({ service, quantity, setQuantity, link, setLink, back, on
 
   return (
     <>
-      <AppTop title={service.platform} subtitle={service.category} back={back} />
-      <section className="detail-card service-title-card"><span className={`service-icon large ${platformClass(service.platform)}`}><PlatformIcon platform={service.platform} size={28} /></span><div><h1>{service.name}</h1><p>{unitPrice(service)}</p></div></section>
+      <AppTop title="Service details" subtitle={service.platform} back={back} />
+      <section className="detail-card service-title-card" data-service-id={service.id}><span className={`service-icon large ${platformClass(service.platform)}`}><PlatformIcon platform={service.platform} size={28} /></span><div><h1>{service.name}</h1><p>{unitPrice(service)}</p></div></section>
       <form onSubmit={onSubmit} className="order-form compact-form">
         <label className="field-label">Link<input type="url" required value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." autoCapitalize="none" autoCorrect="off" /></label>
         <label className="field-label">Quantity

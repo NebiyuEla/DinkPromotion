@@ -98,7 +98,7 @@ export async function getPrmStatuses(orderIds: string[]) {
     const status = await prmRequest<PrmStatus>({ action: "status", order: orderIds[0] });
     return { [orderIds[0]]: status };
   }
-  return prmRequest<Record<string, PrmStatus>>({ action: "multi_status", orders: orderIds.slice(0, 100).join(",") });
+  return prmRequest<Record<string, PrmStatus>>({ action: "status", orders: orderIds.slice(0, 100).join(",") });
 }
 
 export async function requestPrmRefill(orderId: string) {
@@ -207,6 +207,7 @@ const BLOCKED_SERVICE_TERMS = [
   /\bgambl(?:e|ing)\b/i,
   /\bcrypto\b/i,
   /google\s*(?:maps?\s*)?reviews?/i,
+  /\b(?:page\s*)?reviews?\b/i,
   /trustpilot/i,
   /app\s*installs?/i,
   /website\s*traffic/i,
