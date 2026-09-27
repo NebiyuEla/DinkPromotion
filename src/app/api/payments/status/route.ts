@@ -5,6 +5,7 @@ import { verifyChapaTransaction } from "@/lib/chapa";
 import { prisma } from "@/lib/db";
 import { AppError, jsonError } from "@/lib/http";
 import { applySuccessfulChapaPayment } from "@/lib/orders";
+import { notifyPaymentFailed, queueTelegramNotification } from "@/lib/telegram-notify";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,10 +25,13 @@ export async function GET(request: NextRequest) {
 
     const failed = ["failed", "cancelled", "canceled", "failed/cancelled"].includes(verified.status.toLowerCase());
     if (failed) {
-      await prisma.payment.updateMany({
+      const changed = await prisma.payment.updateMany({
         where: { id: payment.id, status: PaymentStatus.PENDING },
         data: { status: PaymentStatus.FAILED, verifiedAt: new Date() },
       });
+      if (changed.count) {
+        queueTelegramNotification(`payment-failed:${payment.id}`, () => notifyPaymentFailed(payment.id));
+      }
     }
     return NextResponse.json({ status: failed ? "failed" : "pending" });
   } catch (error) {
