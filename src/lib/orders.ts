@@ -56,27 +56,48 @@ export async function fulfillOrder(orderId: string) {
 }
 
 export async function refundOrderToWalletOnce(orderId: string, reason: string) {
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { payment: true },
+  });
   if (!order) throw new AppError("Order not found", 404, "ORDER_NOT_FOUND");
-  const reference = `order-refund:${order.id}`;
+
+  // Refund exactly what the customer actually paid into Dink Promotion.
+  // Direct Telebirr/CBE Birr orders include the processing fee in payment.amountMinor,
+  // while wallet-paid orders have no successful direct payment and should return
+  // the order subtotal that was debited from the wallet.
+  const successfulDirectPayment = order.payment?.status === PaymentStatus.SUCCESS && order.payment.kind === PaymentKind.ORDER
+    ? order.payment
+    : null;
+  const targetRefundMinor = successfulDirectPayment?.amountMinor ?? order.amountMinor;
+  const baseReference = `order-refund:${order.id}`;
+  const adjustmentReference = `order-refund-adjustment:${order.id}`;
 
   await prisma.$transaction(async (tx) => {
-    const existing = await tx.walletTransaction.findUnique({ where: { reference } });
-    if (existing) return;
+    const [baseRefund, adjustmentRefund] = await Promise.all([
+      tx.walletTransaction.findUnique({ where: { reference: baseReference } }),
+      tx.walletTransaction.findUnique({ where: { reference: adjustmentReference } }),
+    ]);
 
+    const alreadyRefundedMinor = Math.max(0, baseRefund?.amountMinor ?? 0) + Math.max(0, adjustmentRefund?.amountMinor ?? 0);
+    const remainingRefundMinor = targetRefundMinor - alreadyRefundedMinor;
+    if (remainingRefundMinor <= 0) return;
+
+    const reference = baseRefund ? adjustmentReference : baseReference;
     const wallet = await tx.walletAccount.upsert({
       where: { userId: order.userId },
-      create: { userId: order.userId, balanceMinor: order.amountMinor },
-      update: { balanceMinor: { increment: order.amountMinor } },
+      create: { userId: order.userId, balanceMinor: remainingRefundMinor },
+      update: { balanceMinor: { increment: remainingRefundMinor } },
     });
     await tx.walletTransaction.create({
       data: {
         userId: order.userId,
+        paymentId: successfulDirectPayment?.id,
         type: WalletTransactionType.ORDER_REFUND,
-        amountMinor: order.amountMinor,
+        amountMinor: remainingRefundMinor,
         balanceAfter: wallet.balanceMinor,
         reference,
-        description: reason,
+        description: baseRefund ? `${reason} (processing fee adjustment)` : reason,
       },
     });
   });
