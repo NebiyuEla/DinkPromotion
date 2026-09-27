@@ -1,1 +1,35 @@
-InVzZSBjbGllbnQiOwoKaW1wb3J0IHsgdXNlRWZmZWN0IH0gZnJvbSAicmVhY3QiOwoKY29uc3QgU0VSVklDRV9DQUNIRV9LRVkgPSAiZGluay1wcm9tb3Rpb24tc2VydmljZS1jYWNoZS12MiI7CmNvbnN0IFVYX1ZFUlNJT05fS0VZID0gImRpbmstcHJvbW90aW9uLXVpLXY0IjsKCmV4cG9ydCBmdW5jdGlvbiBNaW5pQXBwVXhFbmhhbmNlcigpIHsKICB1c2VFZmZlY3QoKCkgPT4gewogICAgaWYgKGxvY2FsU3RvcmFnZS5nZXRJdGVtKFVYX1ZFUlNJT05fS0VZKSAhPT0gIjEiKSB7CiAgICAgIGxvY2FsU3RvcmFnZS5yZW1vdmVJdGVtKFNFUlZJQ0VfQ0FDSEVfS0VZKTsKICAgICAgbG9jYWxTdG9yYWdlLnNldEl0ZW0oVVhfVkVSU0lPTl9LRVksICIxIik7CiAgICB9CgogICAgY29uc3QgbmF0aXZlU2Nyb2xsVG8gPSB3aW5kb3cuc2Nyb2xsVG8uYmluZCh3aW5kb3cpOwogICAgY29uc3QgcGF0Y2hlZFNjcm9sbFRvID0gKChhcmcxPzogbnVtYmVyIHwgU2Nyb2xsVG9PcHRpb25zLCBhcmcyPzogbnVtYmVyKSA9PiB7CiAgICAgIGlmICh0eXBlb2YgYXJnMSA9PT0gIm9iamVjdCIgJiYgYXJnMSAhPT0gbnVsbCkgewogICAgICAgIG5hdGl2ZVNjcm9sbFRvKHsgLi4uYXJnMSwgYmVoYXZpb3I6ICJhdXRvIiB9KTsKICAgICAgICByZXR1cm47CiAgICAgIH0KICAgICAgaWYgKHR5cGVvZiBhcmcxID09PSAibnVtYmVyIiAmJiB0eXBlb2YgYXJnMiA9PT0gIm51bWJlciIpIHsKICAgICAgICBuYXRpdmVTY3JvbGxUbyhhcmcxLCBhcmcyKTsKICAgICAgICByZXR1cm47CiAgICAgIH0KICAgICAgbmF0aXZlU2Nyb2xsVG8oMCwgMCk7CiAgICB9KSBhcyB0eXBlb2Ygd2luZG93LnNjcm9sbFRvOwogICAgd2luZG93LnNjcm9sbFRvID0gcGF0Y2hlZFNjcm9sbFRvOwoKICAgIHJldHVybiAoKSA9PiB7CiAgICAgIHdpbmRvdy5zY3JvbGxUbyA9IG5hdGl2ZVNjcm9sbFRvIGFzIHR5cGVvZiB3aW5kb3cuc2Nyb2xsVG87CiAgICB9OwogIH0sIFtdKTsKCiAgcmV0dXJuIG51bGw7Cn0K
+"use client";
+
+import { useEffect } from "react";
+
+const SERVICE_CACHE_KEY = "dink-promotion-service-cache-v2";
+const UX_VERSION_KEY = "dink-promotion-ui-v4";
+
+export function MiniAppUxEnhancer() {
+  useEffect(() => {
+    if (localStorage.getItem(UX_VERSION_KEY) !== "1") {
+      localStorage.removeItem(SERVICE_CACHE_KEY);
+      localStorage.setItem(UX_VERSION_KEY, "1");
+    }
+
+    const nativeScrollTo = window.scrollTo.bind(window);
+    const patchedScrollTo = ((arg1?: number | ScrollToOptions, arg2?: number) => {
+      if (typeof arg1 === "object" && arg1 !== null) {
+        nativeScrollTo({ ...arg1, behavior: "auto" });
+        return;
+      }
+      if (typeof arg1 === "number" && typeof arg2 === "number") {
+        nativeScrollTo(arg1, arg2);
+        return;
+      }
+      nativeScrollTo(0, 0);
+    }) as typeof window.scrollTo;
+    window.scrollTo = patchedScrollTo;
+
+    return () => {
+      window.scrollTo = nativeScrollTo as typeof window.scrollTo;
+    };
+  }, []);
+
+  return null;
+}
