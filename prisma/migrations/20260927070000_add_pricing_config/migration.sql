@@ -2,7 +2,7 @@ CREATE TABLE public."PricingConfig" (
   id INTEGER NOT NULL DEFAULT 1,
   "usdCostRate" DECIMAL(12,4),
   "sellRate" DECIMAL(12,4) NOT NULL DEFAULT 194,
-  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "PricingConfig_pkey" PRIMARY KEY (id),
   CONSTRAINT "PricingConfig_singleton" CHECK (id = 1),
   CONSTRAINT "PricingConfig_sell_rate_positive" CHECK ("sellRate" > 0),
