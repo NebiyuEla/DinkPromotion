@@ -15,6 +15,7 @@ let stopped = false;
 
 const TEXT = {
   open: "🚀 Open App",
+  favorites: "⭐ Favorites",
   orders: "📦 Orders",
   wallet: "👛 Wallet",
   topup: "💰 Top Up",
@@ -86,15 +87,13 @@ async function edit(id, messageId, text, markup) {
 }
 
 async function ack(id, text) {
-  try {
-    await tg("answerCallbackQuery", { callback_query_id: id, ...(text ? { text } : {}) });
-  } catch {}
+  try { await tg("answerCallbackQuery", { callback_query_id: id, ...(text ? { text } : {}) }); } catch {}
 }
 
 function menu() {
   return {
     keyboard: [
-      [{ text: TEXT.open, web_app: { url: appUrl } }],
+      [{ text: TEXT.open, web_app: { url: appUrl } }, { text: TEXT.favorites }],
       [{ text: TEXT.orders }, { text: TEXT.wallet }],
       [{ text: TEXT.topup }, { text: TEXT.offers }],
       [{ text: TEXT.support }],
@@ -105,25 +104,15 @@ function menu() {
   };
 }
 
-const appButton = (label = "🚀 Open App") => ({ text: label, web_app: { url: appUrl } });
+const appButton = (label = TEXT.open) => ({ text: label, web_app: { url: appUrl } });
 const topupButton = () => ({ text: TEXT.topup, callback_data: "topup:start" });
 
 function statusLabel(status) {
-  const labels = {
-    AWAITING_PAYMENT: "Payment pending",
-    PAID: "Paid",
-    QUEUED: "Queued",
-    PENDING: "Pending",
-    PROCESSING: "Processing",
-    IN_PROGRESS: "In progress",
-    PARTIAL: "Partial",
-    COMPLETED: "Completed",
-    CANCELED: "Canceled",
-    FAILED: "Failed",
-    PROVIDER_ERROR: "Provider issue",
-    PROVIDER_REVIEW: "Under review",
-  };
-  return labels[status] || String(status || "").replaceAll("_", " ");
+  return ({
+    AWAITING_PAYMENT: "Payment pending", PAID: "Paid", QUEUED: "Queued", PENDING: "Pending",
+    PROCESSING: "Processing", IN_PROGRESS: "In progress", PARTIAL: "Partial", COMPLETED: "Completed",
+    CANCELED: "Canceled", FAILED: "Failed", PROVIDER_ERROR: "Provider issue", PROVIDER_REVIEW: "Under review",
+  })[status] || String(status || "").replaceAll("_", " ");
 }
 
 function statusIcon(status) {
@@ -137,8 +126,18 @@ async function welcome(message) {
   const id = message.chat.id;
   clearFlow(id);
   const name = esc(message.from?.first_name || "there");
-  // Do not wait for Vercel/database work before answering /start.
   return send(id, `👋 <b>Welcome back, ${name}!</b>\n\nWhat would you like to do?`, menu());
+}
+
+async function showFavorites(id) {
+  clearFlow(id);
+  return send(id, "⭐ <b>Favorites</b>\n\nQuick access to the things you use most.", {
+    inline_keyboard: [
+      [appButton("🚀 Services")],
+      [{ text: TEXT.orders, callback_data: "quick:orders" }, { text: TEXT.wallet, callback_data: "quick:wallet" }],
+      [{ text: TEXT.topup, callback_data: "topup:start" }, { text: TEXT.offers, callback_data: "quick:offers" }],
+    ],
+  });
 }
 
 async function showServices(id) {
@@ -155,12 +154,8 @@ async function showWallet(id, from, messageId) {
     const lines = ["👛 <b>Wallet</b>", `\nBalance: <b>${money(data.balanceMinor)}</b>`];
     if (data.transactions?.length) {
       lines.push("\n<b>Recent activity</b>");
-      for (const tx of data.transactions) {
-        lines.push(`${tx.amountMinor >= 0 ? "🟢" : "⚪️"} ${esc(tx.description)} · <b>${tx.amountMinor >= 0 ? "+" : ""}${money(tx.amountMinor)}</b>`);
-      }
-    } else {
-      lines.push("\nNo wallet activity yet.");
-    }
+      for (const tx of data.transactions) lines.push(`${tx.amountMinor >= 0 ? "🟢" : "⚪️"} ${esc(tx.description)} · <b>${tx.amountMinor >= 0 ? "+" : ""}${money(tx.amountMinor)}</b>`);
+    } else lines.push("\nNo wallet activity yet.");
     const markup = { inline_keyboard: [[topupButton(), { text: "🔄 Refresh", callback_data: "wallet:refresh" }]] };
     return messageId ? edit(id, messageId, lines.join("\n"), markup) : send(id, lines.join("\n"), markup);
   } catch (error) {
@@ -174,19 +169,13 @@ async function showOrders(id, from, messageId, syncOrders = false) {
   try {
     const data = await account(from, "orders", { syncOrders });
     const lines = ["📦 <b>Orders</b>"];
-    if (!data.orders?.length) {
-      lines.push("\nNo paid orders yet.");
-    } else {
-      for (const order of data.orders) {
-        lines.push(`\n${statusIcon(order.status)} <b>${esc(order.serviceName)}</b>`);
-        lines.push(`${esc(order.publicId)} · ${Number(order.quantity).toLocaleString()} · ${money(order.amountMinor)}`);
-        lines.push(`<i>${esc(statusLabel(order.status))}</i>`);
-      }
+    if (!data.orders?.length) lines.push("\nNo paid orders yet.");
+    else for (const order of data.orders) {
+      lines.push(`\n${statusIcon(order.status)} <b>${esc(order.serviceName)}</b>`);
+      lines.push(`${esc(order.publicId)} · ${Number(order.quantity).toLocaleString()} · ${money(order.amountMinor)}`);
+      lines.push(`<i>${esc(statusLabel(order.status))}</i>`);
     }
-    const markup = { inline_keyboard: [[
-      { text: "🔄 Refresh", callback_data: "orders:refresh" },
-      appButton("🚀 Full details"),
-    ]] };
+    const markup = { inline_keyboard: [[{ text: "🔄 Refresh", callback_data: "orders:refresh" }, appButton("🚀 Full details")]] };
     return messageId ? edit(id, messageId, lines.join("\n"), markup) : send(id, lines.join("\n"), markup);
   } catch (error) {
     console.error("Orders failed", error);
@@ -199,13 +188,10 @@ async function showOffers(id, from) {
   try {
     const data = await account(from, "offers");
     const lines = ["🔥 <b>Offers</b>"];
-    if (!data.offers?.length) {
-      lines.push("\nNo active offers right now.");
-    } else {
-      for (const offer of data.offers) {
-        const scope = offer.scope === "GLOBAL" ? "All services" : String(offer.scope).replace(/^PLATFORM:/, "");
-        lines.push(`\n🔥 <b>${esc(scope)}</b> — ${Number(offer.percent)}% off`);
-      }
+    if (!data.offers?.length) lines.push("\nNo active offers right now.");
+    else for (const offer of data.offers) {
+      const scope = offer.scope === "GLOBAL" ? "All services" : String(offer.scope).replace(/^PLATFORM:/, "");
+      lines.push(`\n🔥 <b>${esc(scope)}</b> — ${Number(offer.percent)}% off`);
     }
     return send(id, lines.join("\n"), { inline_keyboard: [[appButton("🚀 Browse services")]] });
   } catch (error) {
@@ -237,13 +223,7 @@ async function topStart(id, from, messageId) {
       const markup = { inline_keyboard: [[{ text: "🔄 Check payment", callback_data: `pay:${data.pendingTopUp.txRef}` }]] };
       return messageId ? edit(id, messageId, text, markup) : send(id, text, markup);
     }
-
-    const flow = {
-      step: "amount",
-      from,
-      saved: data.user?.paymentMobile || null,
-      requestId: crypto.randomUUID(),
-    };
+    const flow = { step: "amount", from, saved: data.user?.paymentMobile || null, requestId: crypto.randomUUID() };
     flows.set(String(id), flow);
     const text = `💰 <b>Top Up</b>\n\nBalance: <b>${money(data.balanceMinor)}</b>\nChoose an amount or enter a custom amount.`;
     const markup = { inline_keyboard: [
@@ -263,10 +243,7 @@ function methodStep(id, flow, amount, messageId) {
   flow.step = "method";
   flows.set(String(id), flow);
   const text = `💰 <b>Top Up</b>\n\n${money(flow.amountMinor)}\nChoose a payment method.`;
-  const markup = { inline_keyboard: [[
-    { text: "📲 Telebirr", callback_data: "topup:m:telebirr" },
-    { text: "🏦 CBE Birr", callback_data: "topup:m:cbebirr" },
-  ]] };
+  const markup = { inline_keyboard: [[{ text: "📲 Telebirr", callback_data: "topup:m:telebirr" }, { text: "🏦 CBE Birr", callback_data: "topup:m:cbebirr" }]] };
   return messageId ? edit(id, messageId, text, markup) : send(id, text, markup);
 }
 
@@ -278,8 +255,7 @@ function mobileStep(id, flow, method, messageId) {
     const digits = String(flow.saved).replace(/\D/g, "");
     const masked = digits.length >= 7 ? `${digits.slice(0, 3)}•••${digits.slice(-3)}` : flow.saved;
     return edit(id, messageId, `📱 Use your saved number <b>${esc(masked)}</b>?`, { inline_keyboard: [[
-      { text: "✅ Use this number", callback_data: "topup:use" },
-      { text: "✏️ Change", callback_data: "topup:change" },
+      { text: "✅ Use this number", callback_data: "topup:use" }, { text: "✏️ Change", callback_data: "topup:change" },
     ]] });
   }
   flow.step = "mobile";
@@ -292,13 +268,7 @@ async function submitTopup(id, flow, mobile) {
   flow.step = "submitting";
   flows.set(String(id), flow);
   try {
-    const result = await api("/api/bot/top-up", {
-      ...profile(flow.from, "profile"),
-      amountMinor: flow.amountMinor,
-      method: flow.method,
-      mobile,
-      requestId: flow.requestId,
-    });
+    const result = await api("/api/bot/top-up", { ...profile(flow.from), amountMinor: flow.amountMinor, method: flow.method, mobile, requestId: flow.requestId });
     clearFlow(id);
     const method = flow.method === "telebirr" ? "Telebirr" : "CBE Birr";
     return send(id, `✅ <b>Payment request sent</b>\n\n💰 ${money(flow.amountMinor)}\n📲 ${method}\n\nApprove it on your phone, then check the payment.`, {
@@ -326,11 +296,7 @@ async function checkPayment(callback) {
         inline_keyboard: [[topupButton(), { text: TEXT.wallet, callback_data: "wallet:refresh" }]],
       });
     }
-    if (result.status === "failed") {
-      return edit(id, callback.message.message_id, "❌ Payment was not completed.", {
-        inline_keyboard: [[topupButton()]],
-      });
-    }
+    if (result.status === "failed") return edit(id, callback.message.message_id, "❌ Payment was not completed.", { inline_keyboard: [[topupButton()]] });
     return edit(id, callback.message.message_id, "⏳ Payment is still pending. Approve it on your phone and check again.", {
       inline_keyboard: [[{ text: "🔄 Check again", callback_data: `pay:${ref}` }]],
     });
@@ -340,9 +306,7 @@ async function checkPayment(callback) {
   }
 }
 
-function matches(value, options) {
-  return options.includes(value.toLowerCase());
-}
+function matches(value, options) { return options.includes(value.toLowerCase()); }
 
 async function onMessage(message) {
   if (!message?.chat?.id || message.chat.type !== "private" || typeof message.text !== "string") return;
@@ -352,6 +316,7 @@ async function onMessage(message) {
   const cmd = value.startsWith("/") ? value.split(/\s+/, 1)[0].split("@", 1)[0] : "";
 
   if (["/start", "/menu"].includes(cmd)) return welcome(message);
+  if (cmd === "/favorites" || cmd === "/favourites" || matches(value, ["favorites", "favourites", "favorite", "favourite", "⭐ favorites", "⭐ favourites"])) return showFavorites(id);
   if (cmd === "/services" || matches(value, ["services", "🚀 services"])) return showServices(id);
   if (cmd === "/orders" || matches(value, ["orders", "my orders", "📦 orders"])) return showOrders(id, message.from);
   if (["/wallet", "/balance"].includes(cmd) || matches(value, ["wallet", "balance", "👛 wallet"])) return showWallet(id, message.from);
@@ -360,27 +325,22 @@ async function onMessage(message) {
   if (["/topup", "/top_up"].includes(cmd) || matches(value, ["topup", "top up", "💰 top up"])) return topStart(id, message.from);
   if (cmd === "/help" || value === "help") {
     clearFlow(id);
-    return send(id, "❓ <b>Help</b>\n\n🚀 /services — Browse services\n📦 /orders — View orders\n👛 /wallet — View wallet\n💰 /topup — Top up wallet\n🔥 /offers — View offers\n🛟 /support — Get support", menu());
+    return send(id, "❓ <b>Help</b>\n\n⭐ /favorites — Quick access\n🚀 /services — Browse services\n📦 /orders — View orders\n👛 /wallet — View wallet\n💰 /topup — Top up wallet\n🔥 /offers — View offers\n🛟 /support — Get support", menu());
   }
 
   const flow = flows.get(String(id));
   if (flow?.step === "custom") {
     const amount = Number(raw.replace(/,/g, ""));
-    if (!Number.isFinite(amount) || amount < 10 || amount > 50_000) {
-      return send(id, "Enter an amount from 10 to 50,000 ETB.");
-    }
+    if (!Number.isFinite(amount) || amount < 10 || amount > 50_000) return send(id, "Enter an amount from 10 to 50,000 ETB.");
     return methodStep(id, flow, amount);
   }
   if (flow?.step === "mobile") {
     const digits = raw.replace(/\D/g, "");
     const local = digits.startsWith("251") ? `0${digits.slice(3)}` : digits;
-    if (!/^0[79]\d{8}$/.test(local)) {
-      return send(id, "Send a valid Ethiopian mobile number, for example 0912345678.");
-    }
+    if (!/^0[79]\d{8}$/.test(local)) return send(id, "Send a valid Ethiopian mobile number, for example 0912345678.");
     return submitTopup(id, flow, local);
   }
   if (flow) return send(id, "Use the Top Up buttons above, or choose another menu option.", menu());
-
   return welcome(message);
 }
 
@@ -389,18 +349,12 @@ async function onCallback(callback) {
   const id = callback.message.chat.id;
   const data = String(callback.data || "");
 
-  if (data === "wallet:refresh") {
-    await ack(callback.id, "Refreshing…");
-    return showWallet(id, callback.from, callback.message.message_id);
-  }
-  if (data === "orders:refresh") {
-    await ack(callback.id, "Refreshing…");
-    return showOrders(id, callback.from, callback.message.message_id, true);
-  }
-  if (data === "topup:start") {
-    await ack(callback.id);
-    return topStart(id, callback.from, callback.message.message_id);
-  }
+  if (data === "quick:orders") { await ack(callback.id); return showOrders(id, callback.from); }
+  if (data === "quick:wallet") { await ack(callback.id); return showWallet(id, callback.from); }
+  if (data === "quick:offers") { await ack(callback.id); return showOffers(id, callback.from); }
+  if (data === "wallet:refresh") { await ack(callback.id, "Refreshing…"); return showWallet(id, callback.from, callback.message.message_id); }
+  if (data === "orders:refresh") { await ack(callback.id, "Refreshing…"); return showOrders(id, callback.from, callback.message.message_id, true); }
+  if (data === "topup:start") { await ack(callback.id); return topStart(id, callback.from, callback.message.message_id); }
   if (data === "topup:custom") {
     await ack(callback.id);
     const flow = flows.get(String(id)) || { from: callback.from, requestId: crypto.randomUUID() };
@@ -447,6 +401,7 @@ async function configure() {
   await tg("deleteWebhook", { drop_pending_updates: false });
   await tg("setMyCommands", { commands: [
     { command: "start", description: "Open menu" },
+    { command: "favorites", description: "Quick access" },
     { command: "services", description: "Browse services" },
     { command: "orders", description: "View orders" },
     { command: "wallet", description: "View wallet" },
@@ -455,12 +410,8 @@ async function configure() {
     { command: "support", description: "Get support" },
     { command: "help", description: "Help" },
   ] });
-  try {
-    await tg("setMyDescription", { description: "Dink Promotion — services, orders, wallet, top ups, offers and support." });
-  } catch {}
-  await tg("setChatMenuButton", {
-    menu_button: { type: "web_app", text: "Open Dink Promotion", web_app: { url: appUrl } },
-  });
+  try { await tg("setMyDescription", { description: "Dink Promotion — services, favorites, orders, wallet, top ups, offers and support." }); } catch {}
+  await tg("setChatMenuButton", { menu_button: { type: "web_app", text: "Open Dink Promotion", web_app: { url: appUrl } } });
   const me = await tg("getMe");
   console.log(`Dink Promotion bot online as @${me.username || me.id}`);
 }
@@ -469,9 +420,7 @@ async function handleUpdate(update) {
   try {
     if (update.callback_query) await onCallback(update.callback_query);
     else if (update.message) await onMessage(update.message);
-  } catch (error) {
-    console.error("Update failed", error);
-  }
+  } catch (error) { console.error("Update failed", error); }
 }
 
 function queueKey(update) {
@@ -490,11 +439,7 @@ function enqueue(update) {
 async function poll() {
   while (!stopped) {
     try {
-      const updates = await tg("getUpdates", {
-        offset,
-        timeout: 30,
-        allowed_updates: ["message", "callback_query"],
-      });
+      const updates = await tg("getUpdates", { offset, timeout: 30, allowed_updates: ["message", "callback_query"] });
       for (const update of updates) {
         offset = Math.max(offset, Number(update.update_id) + 1);
         enqueue(update);
