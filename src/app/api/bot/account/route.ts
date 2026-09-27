@@ -31,6 +31,10 @@ function botOrderStatus(order: Pick<Order, "status"> & { payment?: Pick<Payment,
   return order.status;
 }
 
+function isTerminalOrderStatus(status: OrderStatus) {
+  return status === OrderStatus.COMPLETED || status === OrderStatus.CANCELED || status === OrderStatus.FAILED;
+}
+
 export async function POST(request: NextRequest) {
   try {
     requireBotRequest(request);
@@ -119,7 +123,7 @@ export async function POST(request: NextRequest) {
         take: 5,
       });
       const statuses = orders.map(botOrderStatus);
-      const activeOrders = statuses.filter((status) => ![OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED].includes(status)).length;
+      const activeOrders = statuses.filter((status) => !isTerminalOrderStatus(status)).length;
       return NextResponse.json({
         ...base,
         activeOrders,
@@ -163,7 +167,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    const activeOrders = orders.map(botOrderStatus).filter((status) => ![OrderStatus.COMPLETED, OrderStatus.CANCELED, OrderStatus.FAILED].includes(status)).length;
+    const activeOrders = orders.map(botOrderStatus).filter((status) => !isTerminalOrderStatus(status)).length;
 
     return NextResponse.json({
       ...base,
