@@ -5,7 +5,6 @@ import { assertChapaConfigured, assertDirectChargeAmount, initiateDirectCharge, 
 import { prisma } from "@/lib/db";
 import { AppError, jsonError } from "@/lib/http";
 import { newPaymentRef, payOrderFromWallet } from "@/lib/orders";
-import { directPaymentTotalMinor } from "@/lib/payment-fee";
 import { serializeOrder } from "@/lib/serializers";
 import { payOrderSchema } from "@/lib/validators";
 
@@ -100,7 +99,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (!mobile) throw new AppError("Enter your mobile number", 400, "MOBILE_REQUIRED");
     const normalizedMobile = normalizeEthiopianMobile(mobile);
     assertChapaConfigured();
-    const chargeAmountMinor = directPaymentTotalMinor(order.amountMinor);
+    const chargeAmountMinor = order.amountMinor;
     assertDirectChargeAmount(method, chargeAmountMinor);
 
     if (order.payment?.status === PaymentStatus.FAILED) {
