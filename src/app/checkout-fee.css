@@ -39,6 +39,13 @@
   font-weight: 900;
 }
 
+.checkout-fee-preview-note {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 @media (max-width: 390px) {
   .checkout-summary.compact-checkout {
     display: grid;
