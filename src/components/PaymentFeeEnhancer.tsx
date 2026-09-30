@@ -64,7 +64,7 @@ export function PaymentFeeEnhancer() {
       if (!breakdown) {
         breakdown = document.createElement("div");
         breakdown.className = "checkout-fee-breakdown";
-        breakdown.innerHTML = "<div data-fee-row='subtotal'><span></span><strong></strong></div><div data-fee-row='fee'><span></span><strong></strong></div><div data-fee-row='total'><span></span><strong></strong></div>";
+        breakdown.innerHTML = "<div data-fee-row='subtotal'><span></span><strong></strong></div><div data-fee-row='fee'><span></span><strong></strong></div><div data-fee-row='total'><span></span><strong></strong></div><p class='checkout-fee-preview-note'></p>";
         original.hidden = true;
         original.insertAdjacentElement("afterend", breakdown);
       }
@@ -72,18 +72,27 @@ export function PaymentFeeEnhancer() {
       const subtotalRow = breakdown.querySelector<HTMLElement>("[data-fee-row='subtotal']");
       const feeRow = breakdown.querySelector<HTMLElement>("[data-fee-row='fee']");
       const totalRow = breakdown.querySelector<HTMLElement>("[data-fee-row='total']");
+      const previewNote = breakdown.querySelector<HTMLElement>(".checkout-fee-preview-note");
       if (subtotalRow) {
-        setText(subtotalRow.querySelector("span"), language === "am" ? "የአገልግሎት ዋጋ" : "Subtotal");
+        setText(subtotalRow.querySelector("span"), language === "am" ? "የትዕዛዝ ዋጋ" : "Order amount");
         setText(subtotalRow.querySelector("strong"), money(baseMinor));
       }
       if (feeRow) {
-        const feeLabel = `${language === "am" ? "የክፍያ አገልግሎት" : "Processing fee"} (${feePercent.toLocaleString("en-US", { maximumFractionDigits: 3 })}%)`;
+        const feeLabel = `${language === "am" ? "የChapa የክፍያ አገልግሎት" : "Chapa processing fee"} (${feePercent.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%)`;
         setText(feeRow.querySelector("span"), feeLabel);
         setText(feeRow.querySelector("strong"), money(feeMinor));
       }
       if (totalRow) {
-        setText(totalRow.querySelector("span"), language === "am" ? "ጠቅላላ" : "Total");
+        setText(totalRow.querySelector("span"), language === "am" ? "በክፍያ ጊዜ የሚከፍሉት" : "Amount you'll pay");
         setText(totalRow.querySelector("strong"), money(totalMinor));
+      }
+      if (previewNote) {
+        setText(
+          previewNote,
+          language === "am"
+            ? "ይህ የChapa ክፍያ ቅድመ እይታ ነው። Dink Promotion ወደ Chapa የሚልከው የትዕዛዙን ዋጋ ብቻ ነው፤ Chapa ክፍያውን በክፍያ ጊዜ ያክላል።"
+            : "Fee preview only. Dink Promotion sends the order amount to Chapa; Chapa applies the processing fee during payment.",
+        );
       }
 
       const methodButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".direct-payment .direct-method"));
@@ -93,7 +102,7 @@ export function PaymentFeeEnhancer() {
         const method = methodOf(button);
         if (!method) continue;
         const rule = limits[method];
-        const allowed = totalMinor >= rule.minMinor && totalMinor <= rule.maxMinor;
+        const allowed = baseMinor >= rule.minMinor && baseMinor <= rule.maxMinor;
         button.disabled = !allowed;
         button.dataset.limitDisabled = allowed ? "0" : "1";
         button.setAttribute("aria-disabled", allowed ? "false" : "true");
@@ -114,7 +123,7 @@ export function PaymentFeeEnhancer() {
 
         const textNodes = Array.from(payButton.childNodes).filter((node) => node.nodeType === Node.TEXT_NODE);
         if (textNodes.length) {
-          const label = language === "am" ? ` ${money(totalMinor)} ይክፈሉ` : ` Pay ${money(totalMinor)}`;
+          const label = language === "am" ? " ወደ ክፍያ ይቀጥሉ" : " Continue to payment";
           const last = textNodes[textNodes.length - 1];
           if (last.textContent !== label) last.textContent = label;
         }
@@ -125,11 +134,11 @@ export function PaymentFeeEnhancer() {
         const minMinor = Math.min(limits.telebirr.minMinor, limits.cbebirr.minMinor);
         const maxMinor = Math.max(limits.telebirr.maxMinor, limits.cbebirr.maxMinor);
         let message = "";
-        if (totalMinor < minMinor) {
+        if (baseMinor < minMinor) {
           message = language === "am"
             ? `ቀጥታ ክፍያ ከ${money(minMinor)} ይጀምራል። ለዚህ ትዕዛዝ ዋሌት ይጠቀሙ።`
             : `Direct payment starts at ${money(minMinor)}. Use your wallet for this order.`;
-        } else if (totalMinor > maxMinor) {
+        } else if (baseMinor > maxMinor) {
           message = language === "am"
             ? `ይህ መጠን ከቀጥታ ክፍያ ገደብ በላይ ነው። ዋሌት ይጠቀሙ።`
             : "This amount is above the direct-payment limit. Use your wallet.";
